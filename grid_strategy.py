@@ -857,19 +857,19 @@ class SimplifiedGridBot:
                 logger.warning(f"Max orders ({self.max_orders}) reached, skipping new orders until cleanup")
                 return
             
-            # Additional safety: if we have any tracked orders, be more cautious about placing new ones
-            if active_count >= 6:  # Less conservative threshold to allow more trading
+            # Reduce restrictions to allow more active trading
+            if active_count >= 7:  # Allow more orders before stopping
                 logger.info(f"{active_count} orders already tracked, reducing new order placement")
                 return
             
-            # Long position management - improved logic to prevent duplicate orders
+            # Simplified order validity check - always try to place orders when needed
             if self.long_position == 0:
-                # Check if we already have active long entry orders
+                # No long position - place entry order if we don't have too many buy orders
                 long_buy_orders = [o for o in self.active_orders.values() 
                                  if o['position_type'] == 'long' and o['side'] == 'buy']
                 
-                if len(long_buy_orders) == 0:
-                    logger.info("No long position and no buy orders - placing long entry order")
+                if len(long_buy_orders) < 2:  # Allow up to 2 buy orders for better grid coverage
+                    logger.info("No long position - placing long entry order")
                     entry_price = self.latest_price * (1 - self.grid_spacing)
                     order_quantity = self.calculate_order_quantity(entry_price)
                     result = await self.place_order('buy', entry_price, order_quantity, 'long')
@@ -878,29 +878,28 @@ class SimplifiedGridBot:
                 else:
                     logger.debug(f"Long position=0 but {len(long_buy_orders)} buy orders exist, waiting for fill")
             else:
-                # Check if orders are valid (OKX logic)
-                orders_valid = not (0 < self.buy_long_orders <= self.long_initial_quantity) or \
-                               not (0 < self.sell_long_orders <= self.long_initial_quantity)
-                if orders_valid:
-                    logger.info("Long orders invalid, placing orders")
-                    if self.long_position > 0:
-                        # Place exit order (take profit) using full grid spacing
-                        exit_price = self.latest_price * (1 + self.grid_spacing)  # Full grid spacing
-                        order_quantity = self.calculate_order_quantity(exit_price)
-                        result = await self.place_order('sell', exit_price, order_quantity, 'long')
-                        if result:
-                            logger.info(f"✅ Long exit order placed at ${exit_price:.6f}")
+                # Have long position - place exit orders if we don't have enough sell orders
+                long_sell_orders = [o for o in self.active_orders.values() 
+                                  if o['position_type'] == 'long' and o['side'] == 'sell']
+                
+                if len(long_sell_orders) < 2:  # Allow up to 2 sell orders for better grid coverage
+                    logger.info("Have long position - placing long exit order")
+                    exit_price = self.latest_price * (1 + self.grid_spacing)
+                    order_quantity = self.calculate_order_quantity(exit_price)
+                    result = await self.place_order('sell', exit_price, order_quantity, 'long')
+                    if result:
+                        logger.info(f"✅ Long exit order placed at ${exit_price:.6f}")
                 else:
-                    logger.debug(f"Long orders valid: buy={self.buy_long_orders:.1f}, sell={self.sell_long_orders:.1f}")
+                    logger.debug(f"Long orders sufficient: {len(long_sell_orders)} sell orders exist")
             
-            # Short position management - improved logic to prevent duplicate orders
+            # Short position management - simplified logic
             if self.short_position == 0:
-                # Check if we already have active short entry orders
+                # No short position - place entry order if we don't have too many sell orders
                 short_sell_orders = [o for o in self.active_orders.values() 
                                    if o['position_type'] == 'short' and o['side'] == 'sell']
                 
-                if len(short_sell_orders) == 0:
-                    logger.info("No short position and no sell orders - placing short entry order")
+                if len(short_sell_orders) < 2:  # Allow up to 2 sell orders for better grid coverage
+                    logger.info("No short position - placing short entry order")
                     entry_price = self.latest_price * (1 + self.grid_spacing)
                     order_quantity = self.calculate_order_quantity(entry_price)
                     result = await self.place_order('sell', entry_price, order_quantity, 'short')
@@ -909,20 +908,19 @@ class SimplifiedGridBot:
                 else:
                     logger.debug(f"Short position=0 but {len(short_sell_orders)} sell orders exist, waiting for fill")
             else:
-                # Check if orders are valid (OKX logic)
-                orders_valid = not (0 < self.sell_short_orders <= self.short_initial_quantity) or \
-                               not (0 < self.buy_short_orders <= self.short_initial_quantity)
-                if orders_valid:
-                    logger.info("Short orders invalid, placing orders")
-                    if self.short_position > 0:
-                        # Place exit order (take profit) using full grid spacing
-                        exit_price = self.latest_price * (1 - self.grid_spacing)  # Full grid spacing
-                        order_quantity = self.calculate_order_quantity(exit_price)
-                        result = await self.place_order('buy', exit_price, order_quantity, 'short')
-                        if result:
-                            logger.info(f"✅ Short exit order placed at ${exit_price:.6f}")
+                # Have short position - place exit orders if we don't have enough buy orders
+                short_buy_orders = [o for o in self.active_orders.values() 
+                                  if o['position_type'] == 'short' and o['side'] == 'buy']
+                
+                if len(short_buy_orders) < 2:  # Allow up to 2 buy orders for better grid coverage
+                    logger.info("Have short position - placing short exit order")
+                    exit_price = self.latest_price * (1 - self.grid_spacing)
+                    order_quantity = self.calculate_order_quantity(exit_price)
+                    result = await self.place_order('buy', exit_price, order_quantity, 'short')
+                    if result:
+                        logger.info(f"✅ Short exit order placed at ${exit_price:.6f}")
                 else:
-                    logger.debug(f"Short orders valid: sell={self.sell_short_orders:.1f}, buy={self.buy_short_orders:.1f}")
+                    logger.debug(f"Short orders sufficient: {len(short_buy_orders)} buy orders exist")
                     
         except Exception as e:
             logger.error(f"Grid strategy failed: {e}")
