@@ -1,0 +1,17 @@
+[project]
+name = "pylighter"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "httpx>=0.28.1",
+    "lighter-sdk",
+    "matplotlib>=3.10.3",
+    "numpy>=2.3.1",
+    "orjson>=3.10.18",
+    "python-dotenv>=1.1.1",
+]
+
+[tool.uv.sources]
+lighter-sdk = { git = "https://github.com/elliottech/lighter-python", rev = "05eeaaa35073419137aa85a059e6d257507dd344" }

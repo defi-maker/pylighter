@@ -1,0 +1,3983 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "",
+    "version": ""
+  },
+  "host": "mainnet.zklighter.elliot.ai",
+  "schemes": [
+    "https"
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/": {
+      "get": {
+        "summary": "status",
+        "operationId": "status",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/Status"
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "schema": {
+              "$ref": "#/definitions/ResultCode"
+            }
+          }
+        },
+        "tags": [
+          "root"
+        ],
+        "description": "Get status of zklighter"
+      }
+    },
+    "/api/v1/account": {
+      "get": {
+        "summary": "account",
+        "operationId": "account",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/DetailedAccounts"
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "schema": {
+              "$ref": "#/definitions/ResultCode"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "by",
+            "in": "query",
+            "required": true,
+            "type": "string",
+            "enum": [
+              "index",
+              "l1_address"
+            ]
+          },
+          {
+            "name": "value",
+            "in": "query",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "account"
+        ],
+        "consumes": [
+          "multipart/form-data"
+        ],
+        "description": "Get account by account's index. <br>More details about account index: [Account Index](https://apidocs.lighter.xyz/docs/account-index)<hr>**Response Description:**<br><br>1) **Status:** 1 is active 0 is inactive.<br>2) **Collateral:** The amount of collateral in the account.<hr>**Position Details Description:**<br>1) **OOC:** Open order count in that market.<br>2) **Sign:** 1 for Long, -1 for Short.<br>3) **Position:** The amount of position in that market.<br>4) **Avg Entry Price:** The average entry price of the position.<br>5) **Position Value:** The value of the position.<br>6) **Unrealized PnL:** The unrealized profit and loss of the position.<br>7) **Realized PnL:** The realized profit and loss of the position."
+      }
+    },
+    "/api/v1/accountActiveOrders": {
+      "get": {
+        "summary": "accountActiveOrders",
+        "operationId": "accountActiveOrders",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/Orders"
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "schema": {
+              "$ref": "#/definitions/ResultCode"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "account_index",
+            "in": "query",
+            "required": true,
+            "type": "integer",
+            "format": "int64"
+          },
+          {
+            "name": "market_id",
+            "in": "query",
+            "required": true,
+            "type": "integer",
+            "format": "uint8"
+          },
+          {
+            "name": "auth",
+            "in": "query",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "order"
+        ],
+        "consumes": [
+          "multipart/form-data"
+        ],
+        "description": "Get account active orders. `auth` can be generated using the SDK."
+      }
+    },
+    "/api/v1/accountInactiveOrders": {
+      "get": {
+        "summary": "accountInactiveOrders",
+        "operationId": "accountInactiveOrders",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/Orders"
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "schema": {
+              "$ref": "#/definitions/ResultCode"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "auth",
+            "in": "query",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "account_index",
+            "in": "query",
+            "required": true,
+            "type": "integer",
+            "format": "int64"
+          },
+          {
+            "name": "market_id",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "uint8",
+            "default": "255"
+          },
+          {
+            "name": "ask_filter",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int8",
+            "default": "-1"
+          },
+          {
+            "name": "between_timestamps",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": true,
+            "type": "integer",
+            "format": "int64",
+            "minimum": 1,
+            "maximum": 100
+          }
+        ],
+        "tags": [
+          "order"
+        ],
+        "consumes": [
+          "multipart/form-data"
+        ],
+        "description": "Get account inactive orders"
+      }
+    },
+    "/api/v1/accountOrders": {
+      "get": {
+        "summary": "accountOrders",
+        "operationId": "accountOrders",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/Orders"
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "schema": {
+              "$ref": "#/definitions/ResultCode"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "auth",
+            "in": "query",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "account_index",
+            "in": "query",
+            "required": true,
+            "type": "integer",
+            "format": "int64"
+          },
+          {
+            "name": "market_id",
+            "in": "query",
+            "required": true,
+            "type": "integer",
+            "format": "uint8"
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": true,
+            "type": "integer",
+            "format": "int64",
+            "minimum": 1,
+            "maximum": 100
+          }
+        ],
+        "tags": [
+          "order"
+        ],
+        "consumes": [
+          "multipart/form-data"
+        ],
+        "description": "Get account orders"
+      }
+    },
+    "/api/v1/accountTxs": {
+      "get": {
+        "summary": "accountTxs",
+        "operationId": "accountTxs",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/Txs"
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "schema": {
+              "$ref": "#/definitions/ResultCode"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "index",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int64"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": true,
+            "type": "integer",
+            "format": "int64",
+            "minimum": 1,
+            "maximum": 100
+          },
+          {
+            "name": "by",
+            "in": "query",
+            "required": true,
+            "type": "string",
+            "enum": [
+              "account_index"
+            ]
+          },
+          {
+            "name": "value",
+            "in": "query",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "types",
+            "in": "query",
+            "required": false,
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "format": "uint8"
+            }
+          }
+        ],
+        "tags": [
+          "transaction"
+        ],
+        "consumes": [
+          "multipart/form-data"
+        ],
+        "description": "Get transactions of a specific account"
+      }
+    },
+    "/api/v1/accountsByL1Address": {
+      "get": {
+        "summary": "accountsByL1Address",
+        "operationId": "accountsByL1Address",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/SubAccounts"
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "schema": {
+              "$ref": "#/definitions/ResultCode"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "l1_address",
+            "in": "query",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "account"
+        ],
+        "consumes": [
+          "multipart/form-data"
+        ],
+        "description": "Get accounts by l1_address returns all accounts associated with the given L1 address"
+      }
+    },
+    "/api/v1/apikeys": {
+      "get": {
+        "summary": "apikeys",
+        "operationId": "apikeys",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/AccountApiKeys"
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "schema": {
+              "$ref": "#/definitions/ResultCode"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "account_index",
+            "in": "query",
+            "required": true,
+            "type": "integer",
+            "format": "int64"
+          },
+          {
+            "name": "api_key_index",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "uint8",
+            "default": "255"
+          }
+        ],
+        "tags": [
+          "account"
+        ],
+        "consumes": [
+          "multipart/form-data"
+        ],
+        "description": "Get account api key. Set `api_key_index` to 255 to retrieve all api keys associated with the account."
+      }
+    },
+    "/api/v1/block": {
+      "get": {
+        "summary": "block",
+        "operationId": "block",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/Blocks"
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "schema": {
+              "$ref": "#/definitions/ResultCode"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "by",
+            "in": "query",
+            "required": true,
+            "type": "string",
+            "enum": [
+              "commitment",
+              "height"
+            ]
+          },
+          {
+            "name": "value",
+            "in": "query",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "block"
+        ],
+        "consumes": [
+          "multipart/form-data"
+        ],
+        "description": "Get block by its height or commitment"
+      }
+    },
+    "/api/v1/blockTxs": {
+      "get": {
+        "summary": "blockTxs",
+        "operationId": "blockTxs",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/Txs"
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "schema": {
+              "$ref": "#/definitions/ResultCode"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "by",
+            "in": "query",
+            "required": true,
+            "type": "string",
+            "enum": [
+              "block_height",
+              "block_commitment"
+            ]
+          },
+          {
+            "name": "value",
+            "in": "query",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "transaction"
+        ],
+        "consumes": [
+          "multipart/form-data"
+        ],
+        "description": "Get transactions in a block"
+      }
+    },
+    "/api/v1/blocks": {
+      "get": {
+        "summary": "blocks",
+        "operationId": "blocks",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/Blocks"
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "schema": {
+              "$ref": "#/definitions/ResultCode"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "index",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int64"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": true,
+            "type": "integer",
+            "format": "int64",
+            "minimum": 1,
+            "maximum": 100
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "asc",
+              "desc"
+            ],
+            "default": "asc"
+          }
+        ],
+        "tags": [
+          "block"
+        ],
+        "consumes": [
+          "multipart/form-data"
+        ],
+        "description": "Get blocks"
+      }
+    },
+    "/api/v1/candlesticks": {
+      "get": {
+        "summary": "candlesticks",
+        "operationId": "candlesticks",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/Candlesticks"
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "schema": {
+              "$ref": "#/definitions/ResultCode"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "market_id",
+            "in": "query",
+            "required": true,
+            "type": "integer",
+            "format": "uint8"
+          },
+          {
+            "name": "resolution",
+            "in": "query",
+            "required": true,
+            "type": "string",
+            "enum": [
+              "1m",
+              "5m",
+              "15m",
+              "1h",
+              "4h",
+              "1d"
+            ]
+          },
+          {
+            "name": "start_timestamp",
+            "in": "query",
+            "required": true,
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0,
+            "maximum": 5000000000000
+          },
+          {
+            "name": "end_timestamp",
+            "in": "query",
+            "required": true,
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0,
+            "maximum": 5000000000000
+          },
+          {
+            "name": "count_back",
+            "in": "query",
+            "required": true,
+            "type": "integer",
+            "format": "int64"
+          },
+          {
+            "name": "set_timestamp_to_end",
+            "in": "query",
+            "required": false,
+            "type": "boolean",
+            "format": "boolean",
+            "default": "false"
+          }
+        ],
+        "tags": [
+          "candlestick"
+        ],
+        "consumes": [
+          "multipart/form-data"
+        ],
+        "description": "Get candlesticks"
+      }
+    },
+    "/api/v1/currentHeight": {
+      "get": {
+        "summary": "currentHeight",
+        "operationId": "currentHeight",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/CurrentHeight"
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "schema": {
+              "$ref": "#/definitions/ResultCode"
+            }
+          }
+        },
+        "tags": [
+          "block"
+        ],
+        "description": "Get current height"
+      }
+    },
+    "/api/v1/deposit/history": {
+      "get": {
+        "summary": "deposit_history",
+        "operationId": "deposit_history",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/DepositHistory"
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "schema": {
+              "$ref": "#/definitions/ResultCode"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "account_index",
+            "in": "query",
+            "required": true,
+            "type": "integer",
+            "format": "int64"
+          },
+          {
+            "name": "auth",
+            "in": "query",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "l1_address",
+            "in": "query",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "filter",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "all",
+              "pending",
+              "claimable"
+            ]
+          }
+        ],
+        "tags": [
+          "transaction"
+        ],
+        "consumes": [
+          "multipart/form-data"
+        ],
+        "description": "Get deposit history"
+      }
+    },
+    "/api/v1/exchangeStats": {
+      "get": {
+        "summary": "exchangeStats",
+        "operationId": "exchangeStats",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/ExchangeStats"
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "schema": {
+              "$ref": "#/definitions/ResultCode"
+            }
+          }
+        },
+        "tags": [
+          "order"
+        ],
+        "description": "Get exchange stats"
+      }
+    },
+    "/api/v1/feeBucket": {
+      "get": {
+        "summary": "feeBucket",
+        "operationId": "feeBucket",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/FeeBucket"
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "schema": {
+              "$ref": "#/definitions/ResultCode"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "account_index",
+            "in": "query",
+            "required": true,
+            "type": "integer",
+            "format": "int64"
+          }
+        ],
+        "tags": [
+          "account"
+        ],
+        "consumes": [
+          "multipart/form-data"
+        ],
+        "description": "Get account fee bucket"
+      }
+    },
+    "/api/v1/fundings": {
+      "get": {
+        "summary": "fundings",
+        "operationId": "fundings",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/Fundings"
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "schema": {
+              "$ref": "#/definitions/ResultCode"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "market_id",
+            "in": "query",
+            "required": true,
+            "type": "integer",
+            "format": "uint8"
+          },
+          {
+            "name": "resolution",
+            "in": "query",
+            "required": true,
+            "type": "string",
+            "enum": [
+              "1h"
+            ]
+          },
+          {
+            "name": "start_timestamp",
+            "in": "query",
+            "required": true,
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0,
+            "maximum": 5000000000000
+          },
+          {
+            "name": "end_timestamp",
+            "in": "query",
+            "required": true,
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0,
+            "maximum": 5000000000000
+          },
+          {
+            "name": "count_back",
+            "in": "query",
+            "required": true,
+            "type": "integer",
+            "format": "int64"
+          }
+        ],
+        "tags": [
+          "candlestick"
+        ],
+        "consumes": [
+          "multipart/form-data"
+        ],
+        "description": "Get fundings"
+      }
+    },
+    "/api/v1/nextNonce": {
+      "get": {
+        "summary": "nextNonce",
+        "operationId": "nextNonce",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/NextNonce"
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "schema": {
+              "$ref": "#/definitions/ResultCode"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "account_index",
+            "in": "query",
+            "required": true,
+            "type": "integer",
+            "format": "int64"
+          },
+          {
+            "name": "api_key_index",
+            "in": "query",
+            "required": true,
+            "type": "integer",
+            "format": "uint8"
+          }
+        ],
+        "tags": [
+          "transaction"
+        ],
+        "consumes": [
+          "multipart/form-data"
+        ],
+        "description": "Get next nonce for a specific account and api key"
+      }
+    },
+    "/api/v1/orderBookDetails": {
+      "get": {
+        "summary": "orderBookDetails",
+        "operationId": "orderBookDetails",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/OrderBookDetails"
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "schema": {
+              "$ref": "#/definitions/ResultCode"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "market_id",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "uint8",
+            "default": "255"
+          }
+        ],
+        "tags": [
+          "order"
+        ],
+        "consumes": [
+          "multipart/form-data"
+        ],
+        "description": "Get order books metadata"
+      }
+    },
+    "/api/v1/orderBookOrders": {
+      "get": {
+        "summary": "orderBookOrders",
+        "operationId": "orderBookOrders",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/OrderBookOrders"
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "schema": {
+              "$ref": "#/definitions/ResultCode"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "market_id",
+            "in": "query",
+            "required": true,
+            "type": "integer",
+            "format": "uint8"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": true,
+            "type": "integer",
+            "format": "int64",
+            "minimum": 1,
+            "maximum": 100
+          }
+        ],
+        "tags": [
+          "order"
+        ],
+        "consumes": [
+          "multipart/form-data"
+        ],
+        "description": "Get order book orders"
+      }
+    },
+    "/api/v1/orderBooks": {
+      "get": {
+        "summary": "orderBooks",
+        "operationId": "orderBooks",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/OrderBooks"
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "schema": {
+              "$ref": "#/definitions/ResultCode"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "market_id",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "uint8",
+            "default": "255"
+          }
+        ],
+        "tags": [
+          "order"
+        ],
+        "consumes": [
+          "multipart/form-data"
+        ],
+        "description": "Get order books metadata.<hr>**Response Description:**<br><br>1) **Taker and maker fees** are in percentage.<br>2) **Min base amount:** The amount of base token that can be traded in a single order.<br>3) **Min quote amount:** The amount of quote token that can be traded in a single order.<br>4) **Supported size decimals:** The number of decimal places that can be used for the size of the order.<br>5) **Supported price decimals:** The number of decimal places that can be used for the price of the order.<br>6) **Supported quote decimals:** Size Decimals + Quote Decimals."
+      }
+    },
+    "/api/v1/pnl": {
+      "get": {
+        "summary": "pnl",
+        "operationId": "pnl",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/AccountPnL"
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "schema": {
+              "$ref": "#/definitions/ResultCode"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "auth",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "by",
+            "in": "query",
+            "required": true,
+            "type": "string",
+            "enum": [
+              "index"
+            ]
+          },
+          {
+            "name": "value",
+            "in": "query",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "resolution",
+            "in": "query",
+            "required": true,
+            "type": "string",
+            "enum": [
+              "1m",
+              "5m",
+              "15m",
+              "1h",
+              "4h",
+              "1d"
+            ]
+          },
+          {
+            "name": "start_timestamp",
+            "in": "query",
+            "required": true,
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0,
+            "maximum": 5000000000000
+          },
+          {
+            "name": "end_timestamp",
+            "in": "query",
+            "required": true,
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0,
+            "maximum": 5000000000000
+          },
+          {
+            "name": "count_back",
+            "in": "query",
+            "required": true,
+            "type": "integer",
+            "format": "int64"
+          },
+          {
+            "name": "ignore_transfers",
+            "in": "query",
+            "required": false,
+            "type": "boolean",
+            "format": "boolean",
+            "default": "false"
+          }
+        ],
+        "tags": [
+          "account"
+        ],
+        "consumes": [
+          "multipart/form-data"
+        ],
+        "description": "Get account PnL chart"
+      }
+    },
+    "/api/v1/publicPools": {
+      "get": {
+        "summary": "publicPools",
+        "operationId": "publicPools",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/PublicPools"
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "schema": {
+              "$ref": "#/definitions/ResultCode"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "auth",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "filter",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "all",
+              "user",
+              "protocol",
+              "account_index"
+            ]
+          },
+          {
+            "name": "index",
+            "in": "query",
+            "required": true,
+            "type": "integer",
+            "format": "int64"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": true,
+            "type": "integer",
+            "format": "int64",
+            "minimum": 1,
+            "maximum": 100
+          },
+          {
+            "name": "account_index",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int64"
+          }
+        ],
+        "tags": [
+          "account"
+        ],
+        "consumes": [
+          "multipart/form-data"
+        ],
+        "description": "Get public pools"
+      }
+    },
+    "/api/v1/recentTrades": {
+      "get": {
+        "summary": "recentTrades",
+        "operationId": "recentTrades",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/Trades"
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "schema": {
+              "$ref": "#/definitions/ResultCode"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "market_id",
+            "in": "query",
+            "required": true,
+            "type": "integer",
+            "format": "uint8"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": true,
+            "type": "integer",
+            "format": "int64",
+            "minimum": 1,
+            "maximum": 100
+          }
+        ],
+        "tags": [
+          "order"
+        ],
+        "consumes": [
+          "multipart/form-data"
+        ],
+        "description": "Get recent trades"
+      }
+    },
+    "/api/v1/sendTx": {
+      "post": {
+        "summary": "sendTx",
+        "operationId": "sendTx",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/TxHash"
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "schema": {
+              "$ref": "#/definitions/ResultCode"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/ReqSendTx"
+            }
+          }
+        ],
+        "tags": [
+          "transaction"
+        ],
+        "consumes": [
+          "multipart/form-data"
+        ],
+        "description": "You need to sign the transaction body before sending it to the server. More details can be found in the Get Started docs: [Get Started For Programmers](https://apidocs.lighter.xyz/docs/get-started-for-programmers)"
+      }
+    },
+    "/api/v1/sendTxBatch": {
+      "post": {
+        "summary": "sendTxBatch",
+        "operationId": "sendTxBatch",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/TxHashes"
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "schema": {
+              "$ref": "#/definitions/ResultCode"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/ReqSendTxBatch"
+            }
+          }
+        ],
+        "tags": [
+          "transaction"
+        ],
+        "consumes": [
+          "multipart/form-data"
+        ],
+        "description": "You need to sign the transaction body before sending it to the server. More details can be found in the Get Started docs: [Get Started For Programmers](https://apidocs.lighter.xyz/docs/get-started-for-programmers)"
+      }
+    },
+    "/api/v1/trades": {
+      "get": {
+        "summary": "trades",
+        "operationId": "trades",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/Trades"
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "schema": {
+              "$ref": "#/definitions/ResultCode"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "auth",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "market_id",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "uint8",
+            "default": "255"
+          },
+          {
+            "name": "account_index",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int64",
+            "default": "-1"
+          },
+          {
+            "name": "order_index",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int64"
+          },
+          {
+            "name": "sort_by",
+            "in": "query",
+            "required": true,
+            "type": "string",
+            "enum": [
+              "block_height",
+              "timestamp",
+              "trade_id"
+            ]
+          },
+          {
+            "name": "sort_dir",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "asc",
+              "desc"
+            ],
+            "default": "asc"
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int64",
+            "default": "-1"
+          },
+          {
+            "name": "ask_filter",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int8",
+            "default": "-1"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": true,
+            "type": "integer",
+            "format": "int64",
+            "minimum": 1,
+            "maximum": 100
+          }
+        ],
+        "tags": [
+          "order"
+        ],
+        "consumes": [
+          "multipart/form-data"
+        ],
+        "description": "Get trades"
+      }
+    },
+    "/api/v1/tx": {
+      "get": {
+        "summary": "tx",
+        "operationId": "tx",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/EnrichedTx"
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "schema": {
+              "$ref": "#/definitions/ResultCode"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "by",
+            "in": "query",
+            "required": true,
+            "type": "string",
+            "enum": [
+              "hash",
+              "sequence_index"
+            ]
+          },
+          {
+            "name": "value",
+            "in": "query",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "transaction"
+        ],
+        "consumes": [
+          "multipart/form-data"
+        ],
+        "description": "Get transaction by hash or sequence index"
+      }
+    },
+    "/api/v1/txFromL1TxHash": {
+      "get": {
+        "summary": "txFromL1TxHash",
+        "operationId": "txFromL1TxHash",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/EnrichedTx"
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "schema": {
+              "$ref": "#/definitions/ResultCode"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "hash",
+            "in": "query",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "transaction"
+        ],
+        "consumes": [
+          "multipart/form-data"
+        ],
+        "description": "Get L1 transaction by L1 transaction hash"
+      }
+    },
+    "/api/v1/txs": {
+      "get": {
+        "summary": "txs",
+        "operationId": "txs",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/Txs"
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "schema": {
+              "$ref": "#/definitions/ResultCode"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "index",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int64"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": true,
+            "type": "integer",
+            "format": "int64",
+            "minimum": 1,
+            "maximum": 100
+          }
+        ],
+        "tags": [
+          "transaction"
+        ],
+        "consumes": [
+          "multipart/form-data"
+        ],
+        "description": "Get transactions which are already packed into blocks"
+      }
+    },
+    "/api/v1/withdraw/history": {
+      "get": {
+        "summary": "withdraw_history",
+        "operationId": "withdraw_history",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/WithdrawHistory"
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "schema": {
+              "$ref": "#/definitions/ResultCode"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "account_index",
+            "in": "query",
+            "required": true,
+            "type": "integer",
+            "format": "int64"
+          },
+          {
+            "name": "auth",
+            "in": "query",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "filter",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "all",
+              "pending",
+              "claimable"
+            ]
+          }
+        ],
+        "tags": [
+          "transaction"
+        ],
+        "consumes": [
+          "multipart/form-data"
+        ],
+        "description": "Get withdraw history"
+      }
+    },
+    "/info": {
+      "get": {
+        "summary": "info",
+        "operationId": "info",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/ZkLighterInfo"
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "schema": {
+              "$ref": "#/definitions/ResultCode"
+            }
+          }
+        },
+        "tags": [
+          "root"
+        ],
+        "description": "Get info of zklighter"
+      }
+    }
+  },
+  "definitions": {
+    "Account": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32",
+          "example": "200"
+        },
+        "message": {
+          "type": "string"
+        },
+        "account_type": {
+          "type": "integer",
+          "format": "uint8",
+          "example": "1"
+        },
+        "index": {
+          "type": "integer",
+          "format": "int64",
+          "example": "1"
+        },
+        "l1_address": {
+          "type": "string",
+          "example": "0x70997970C51812dc3A010C7d01b50e0d17dc79C8"
+        },
+        "cancel_all_time": {
+          "type": "integer",
+          "format": "int64",
+          "example": "1640995200"
+        },
+        "total_order_count": {
+          "type": "integer",
+          "format": "int64",
+          "example": "100"
+        },
+        "pending_order_count": {
+          "type": "integer",
+          "format": "int64",
+          "example": "100"
+        },
+        "status": {
+          "type": "integer",
+          "format": "uint8",
+          "example": "1"
+        },
+        "collateral": {
+          "type": "string",
+          "example": "46342"
+        }
+      },
+      "title": "Account",
+      "required": [
+        "code",
+        "account_type",
+        "index",
+        "l1_address",
+        "cancel_all_time",
+        "total_order_count",
+        "pending_order_count",
+        "status",
+        "collateral"
+      ]
+    },
+    "AccountApiKeys": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32",
+          "example": "200"
+        },
+        "message": {
+          "type": "string"
+        },
+        "api_keys": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ApiKey"
+          }
+        }
+      },
+      "title": "AccountApiKeys",
+      "required": [
+        "code",
+        "api_keys"
+      ]
+    },
+    "AccountPnL": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32",
+          "example": "200"
+        },
+        "message": {
+          "type": "string"
+        },
+        "resolution": {
+          "type": "string",
+          "example": "15m"
+        },
+        "pnl": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/PnLEntry"
+          }
+        }
+      },
+      "title": "AccountPnL",
+      "required": [
+        "code",
+        "resolution",
+        "pnl"
+      ]
+    },
+    "AccountPosition": {
+      "type": "object",
+      "properties": {
+        "market_id": {
+          "type": "integer",
+          "format": "uint8",
+          "example": "1"
+        },
+        "symbol": {
+          "type": "string",
+          "example": "ETH"
+        },
+        "initial_margin_fraction": {
+          "type": "string",
+          "example": "20.00"
+        },
+        "open_order_count": {
+          "type": "integer",
+          "format": "int64",
+          "example": "3"
+        },
+        "pending_order_count": {
+          "type": "integer",
+          "format": "int64",
+          "example": "3"
+        },
+        "position_tied_order_count": {
+          "type": "integer",
+          "format": "int64",
+          "example": "3"
+        },
+        "sign": {
+          "type": "integer",
+          "format": "int32",
+          "example": "1"
+        },
+        "position": {
+          "type": "string",
+          "example": "3.6956"
+        },
+        "avg_entry_price": {
+          "type": "string",
+          "example": "3024.66"
+        },
+        "position_value": {
+          "type": "string",
+          "example": "3019.92"
+        },
+        "unrealized_pnl": {
+          "type": "string",
+          "example": "17.521309"
+        },
+        "realized_pnl": {
+          "type": "string",
+          "example": "2.000000"
+        },
+        "total_funding_paid_out": {
+          "type": "string",
+          "example": "34.2"
+        }
+      },
+      "title": "AccountPosition",
+      "required": [
+        "market_id",
+        "symbol",
+        "initial_margin_fraction",
+        "open_order_count",
+        "pending_order_count",
+        "position_tied_order_count",
+        "sign",
+        "position",
+        "avg_entry_price",
+        "position_value",
+        "unrealized_pnl",
+        "realized_pnl"
+      ]
+    },
+    "ApiKey": {
+      "type": "object",
+      "properties": {
+        "account_index": {
+          "type": "integer",
+          "format": "int64",
+          "example": "3"
+        },
+        "api_key_index": {
+          "type": "integer",
+          "format": "uint8",
+          "example": "0"
+        },
+        "nonce": {
+          "type": "integer",
+          "format": "int64",
+          "example": "722"
+        },
+        "public_key": {
+          "type": "string"
+        }
+      },
+      "title": "ApiKey",
+      "required": [
+        "account_index",
+        "api_key_index",
+        "nonce",
+        "public_key"
+      ]
+    },
+    "Block": {
+      "type": "object",
+      "properties": {
+        "commitment": {
+          "type": "string"
+        },
+        "height": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "state_root": {
+          "type": "string"
+        },
+        "priority_operations": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "on_chain_l2_operations": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "pending_on_chain_operations_pub_data": {
+          "type": "string"
+        },
+        "committed_tx_hash": {
+          "type": "string"
+        },
+        "committed_at": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "verified_tx_hash": {
+          "type": "string"
+        },
+        "verified_at": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "txs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Tx"
+          }
+        },
+        "status": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "size": {
+          "type": "integer",
+          "format": "uin16"
+        }
+      },
+      "title": "Block",
+      "required": [
+        "commitment",
+        "height",
+        "state_root",
+        "priority_operations",
+        "on_chain_l2_operations",
+        "pending_on_chain_operations_pub_data",
+        "committed_tx_hash",
+        "committed_at",
+        "verified_tx_hash",
+        "verified_at",
+        "txs",
+        "status",
+        "size"
+      ]
+    },
+    "Blocks": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32",
+          "example": "200"
+        },
+        "message": {
+          "type": "string"
+        },
+        "total": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "blocks": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Block"
+          }
+        }
+      },
+      "title": "Blocks",
+      "required": [
+        "code",
+        "total",
+        "blocks"
+      ]
+    },
+    "Candlestick": {
+      "type": "object",
+      "properties": {
+        "timestamp": {
+          "type": "integer",
+          "format": "int64",
+          "example": "1640995200"
+        },
+        "open": {
+          "type": "number",
+          "format": "double",
+          "example": "3024.66"
+        },
+        "high": {
+          "type": "number",
+          "format": "double",
+          "example": "3034.66"
+        },
+        "low": {
+          "type": "number",
+          "format": "double",
+          "example": "3014.66"
+        },
+        "close": {
+          "type": "number",
+          "format": "double",
+          "example": "3024.66"
+        },
+        "volume0": {
+          "type": "number",
+          "format": "double",
+          "example": "235.25"
+        },
+        "volume1": {
+          "type": "number",
+          "format": "double",
+          "example": "93566.25"
+        },
+        "last_trade_id": {
+          "type": "integer",
+          "format": "int64",
+          "example": "1"
+        }
+      },
+      "title": "Candlestick",
+      "required": [
+        "timestamp",
+        "open",
+        "high",
+        "low",
+        "close",
+        "volume0",
+        "volume1",
+        "last_trade_id"
+      ]
+    },
+    "Candlesticks": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32",
+          "example": "200"
+        },
+        "message": {
+          "type": "string"
+        },
+        "resolution": {
+          "type": "string",
+          "example": "15m"
+        },
+        "candlesticks": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Candlestick"
+          }
+        }
+      },
+      "title": "Candlesticks",
+      "required": [
+        "code",
+        "resolution",
+        "candlesticks"
+      ]
+    },
+    "CurrentHeight": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32",
+          "example": "200"
+        },
+        "message": {
+          "type": "string"
+        },
+        "height": {
+          "type": "integer",
+          "format": "int64"
+        }
+      },
+      "title": "CurrentHeight",
+      "required": [
+        "code",
+        "height"
+      ]
+    },
+    "DailyReturn": {
+      "type": "object",
+      "properties": {
+        "timestamp": {
+          "type": "integer",
+          "format": "int64",
+          "example": "1640995200"
+        },
+        "daily_return": {
+          "type": "number",
+          "format": "double",
+          "example": "0.0001"
+        }
+      },
+      "title": "DailyReturn",
+      "required": [
+        "timestamp",
+        "daily_return"
+      ]
+    },
+    "DepositHistory": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32",
+          "example": "200"
+        },
+        "message": {
+          "type": "string"
+        },
+        "deposits": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/DepositHistoryItem"
+          }
+        },
+        "cursor": {
+          "type": "string"
+        }
+      },
+      "title": "DepositHistory",
+      "required": [
+        "code",
+        "deposits",
+        "cursor"
+      ]
+    },
+    "DepositHistoryItem": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "amount": {
+          "type": "string",
+          "example": "0.1"
+        },
+        "timestamp": {
+          "type": "integer",
+          "format": "int64",
+          "example": "1640995200"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "failed",
+            "pending",
+            "completed",
+            "claimable"
+          ]
+        },
+        "l1_tx_hash": {
+          "type": "string",
+          "example": "0x70997970C51812dc3A010C7d01b50e0d17dc79C8"
+        }
+      },
+      "title": "DepositHistoryItem",
+      "required": [
+        "id",
+        "amount",
+        "timestamp",
+        "status",
+        "l1_tx_hash"
+      ]
+    },
+    "DetailedAccount": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32",
+          "example": "200"
+        },
+        "message": {
+          "type": "string"
+        },
+        "account_type": {
+          "type": "integer",
+          "format": "uint8",
+          "example": "1"
+        },
+        "index": {
+          "type": "integer",
+          "format": "int64",
+          "example": "1"
+        },
+        "l1_address": {
+          "type": "string",
+          "example": "0x70997970C51812dc3A010C7d01b50e0d17dc79C8"
+        },
+        "cancel_all_time": {
+          "type": "integer",
+          "format": "int64",
+          "example": "1640995200"
+        },
+        "total_order_count": {
+          "type": "integer",
+          "format": "int64",
+          "example": "100"
+        },
+        "pending_order_count": {
+          "type": "integer",
+          "format": "int64",
+          "example": "100"
+        },
+        "status": {
+          "type": "integer",
+          "format": "uint8",
+          "example": "1"
+        },
+        "collateral": {
+          "type": "string",
+          "example": "46342"
+        },
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "can_invite": {
+          "type": "boolean",
+          "format": "boolean"
+        },
+        "referral_points_percentage": {
+          "type": "string"
+        },
+        "max_referral_usage_limit": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "positions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/AccountPosition"
+          }
+        },
+        "total_asset_value": {
+          "type": "string",
+          "example": "19995"
+        },
+        "pool_info": {
+          "$ref": "#/definitions/PublicPoolInfo"
+        },
+        "shares": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/PublicPoolShare"
+          }
+        }
+      },
+      "title": "DetailedAccount",
+      "required": [
+        "code",
+        "account_type",
+        "index",
+        "l1_address",
+        "cancel_all_time",
+        "total_order_count",
+        "pending_order_count",
+        "status",
+        "collateral",
+        "name",
+        "description",
+        "can_invite",
+        "referral_points_percentage",
+        "max_referral_usage_limit",
+        "positions",
+        "total_asset_value",
+        "pool_info",
+        "shares"
+      ]
+    },
+    "DetailedAccounts": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32",
+          "example": "200"
+        },
+        "message": {
+          "type": "string"
+        },
+        "total": {
+          "type": "integer",
+          "format": "int64",
+          "example": "1"
+        },
+        "accounts": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/DetailedAccount"
+          }
+        }
+      },
+      "title": "DetailedAccounts",
+      "required": [
+        "code",
+        "total",
+        "accounts"
+      ]
+    },
+    "EnrichedTx": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32",
+          "example": "200"
+        },
+        "message": {
+          "type": "string"
+        },
+        "hash": {
+          "type": "string",
+          "example": "0x70997970C51812dc3A010C7d01b50e0d17dc79C8"
+        },
+        "type": {
+          "type": "integer",
+          "format": "uint8",
+          "example": "1",
+          "maximum": 64,
+          "minimum": 1
+        },
+        "info": {
+          "type": "string",
+          "example": "{}"
+        },
+        "event_info": {
+          "type": "string",
+          "example": "{}"
+        },
+        "status": {
+          "type": "integer",
+          "format": "int64",
+          "example": "1"
+        },
+        "transaction_index": {
+          "type": "integer",
+          "format": "int64",
+          "example": "8761"
+        },
+        "l1_address": {
+          "type": "string",
+          "example": "0x70997970C51812dc3A010C7d01b50e0d17dc79C8"
+        },
+        "account_index": {
+          "type": "integer",
+          "format": "int64",
+          "example": "1"
+        },
+        "nonce": {
+          "type": "integer",
+          "format": "int64",
+          "example": "722"
+        },
+        "expire_at": {
+          "type": "integer",
+          "format": "int64",
+          "example": "1640995200"
+        },
+        "block_height": {
+          "type": "integer",
+          "format": "int64",
+          "example": "45434"
+        },
+        "queued_at": {
+          "type": "integer",
+          "format": "int64",
+          "example": "1640995200"
+        },
+        "executed_at": {
+          "type": "integer",
+          "format": "int64",
+          "example": "1640995200"
+        },
+        "sequence_index": {
+          "type": "integer",
+          "format": "int64",
+          "example": "8761"
+        },
+        "parent_hash": {
+          "type": "string",
+          "example": "0x70997970C51812dc3A010C7d01b50e0d17dc79C8"
+        },
+        "committed_at": {
+          "type": "integer",
+          "format": "int64",
+          "example": "1640995200"
+        },
+        "verified_at": {
+          "type": "integer",
+          "format": "int64",
+          "example": "1640995200"
+        }
+      },
+      "title": "EnrichedTx",
+      "required": [
+        "code",
+        "hash",
+        "type",
+        "info",
+        "event_info",
+        "status",
+        "transaction_index",
+        "l1_address",
+        "account_index",
+        "nonce",
+        "expire_at",
+        "block_height",
+        "queued_at",
+        "executed_at",
+        "sequence_index",
+        "parent_hash",
+        "committed_at",
+        "verified_at"
+      ]
+    },
+    "ExchangeStats": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32",
+          "example": "200"
+        },
+        "message": {
+          "type": "string"
+        },
+        "total": {
+          "type": "integer",
+          "format": "int64",
+          "example": "1"
+        },
+        "order_book_stats": {
+          "type": "array",
+          "example": "1",
+          "items": {
+            "$ref": "#/definitions/OrderBookStats"
+          }
+        },
+        "daily_usd_volume": {
+          "type": "number",
+          "format": "double",
+          "example": "93566.25"
+        },
+        "daily_trades_count": {
+          "type": "integer",
+          "format": "int64",
+          "example": "68"
+        }
+      },
+      "title": "ExchangeStats",
+      "required": [
+        "code",
+        "total",
+        "order_book_stats",
+        "daily_usd_volume",
+        "daily_trades_count"
+      ]
+    },
+    "FeeBucket": {
+      "type": "object",
+      "properties": {
+        "vip_tier": {
+          "type": "integer",
+          "format": "uint8"
+        },
+        "taker_fee": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "maker_fee": {
+          "type": "integer",
+          "format": "int32"
+        }
+      },
+      "title": "FeeBucket",
+      "required": [
+        "vip_tier",
+        "taker_fee",
+        "maker_fee"
+      ]
+    },
+    "Funding": {
+      "type": "object",
+      "properties": {
+        "timestamp": {
+          "type": "integer",
+          "format": "int64",
+          "example": "1640995200"
+        },
+        "value": {
+          "type": "string",
+          "example": "0.0001"
+        },
+        "rate": {
+          "type": "string",
+          "example": "0.0001"
+        },
+        "direction": {
+          "type": "string",
+          "example": "long"
+        }
+      },
+      "title": "Funding",
+      "required": [
+        "timestamp",
+        "value",
+        "rate",
+        "direction"
+      ]
+    },
+    "Fundings": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32",
+          "example": "200"
+        },
+        "message": {
+          "type": "string"
+        },
+        "resolution": {
+          "type": "string",
+          "example": "1h"
+        },
+        "fundings": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Funding"
+          }
+        }
+      },
+      "title": "Fundings",
+      "required": [
+        "code",
+        "resolution",
+        "fundings"
+      ]
+    },
+    "NextNonce": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32",
+          "example": "200"
+        },
+        "message": {
+          "type": "string"
+        },
+        "nonce": {
+          "type": "integer",
+          "format": "int64",
+          "example": "722"
+        }
+      },
+      "title": "NextNonce",
+      "required": [
+        "code",
+        "nonce"
+      ]
+    },
+    "Order": {
+      "type": "object",
+      "properties": {
+        "order_index": {
+          "type": "integer",
+          "format": "int64",
+          "example": "1"
+        },
+        "client_order_index": {
+          "type": "integer",
+          "format": "int64",
+          "example": "234"
+        },
+        "order_id": {
+          "type": "string",
+          "example": "1"
+        },
+        "client_order_id": {
+          "type": "string",
+          "example": "234"
+        },
+        "market_index": {
+          "type": "integer",
+          "format": "uint8",
+          "example": "1"
+        },
+        "owner_account_index": {
+          "type": "integer",
+          "format": "int64",
+          "example": "1"
+        },
+        "initial_base_amount": {
+          "type": "string",
+          "example": "0.1"
+        },
+        "price": {
+          "type": "string",
+          "example": "3024.66"
+        },
+        "nonce": {
+          "type": "integer",
+          "format": "int64",
+          "example": "722"
+        },
+        "remaining_base_amount": {
+          "type": "string",
+          "example": "0.1"
+        },
+        "is_ask": {
+          "type": "boolean",
+          "format": "boolean",
+          "example": "true"
+        },
+        "base_size": {
+          "type": "integer",
+          "format": "int64",
+          "example": "12354"
+        },
+        "base_price": {
+          "type": "integer",
+          "format": "int32",
+          "example": "3024"
+        },
+        "filled_base_amount": {
+          "type": "string",
+          "example": "0.1"
+        },
+        "filled_quote_amount": {
+          "type": "string",
+          "example": "0.1"
+        },
+        "side": {
+          "type": "string",
+          "example": "buy",
+          "default": "buy",
+          "description": " TODO: remove this"
+        },
+        "type": {
+          "type": "string",
+          "example": "limit",
+          "enum": [
+            "limit",
+            "market",
+            "stop-loss",
+            "stop-loss-limit",
+            "take-profit",
+            "take-profit-limit",
+            "twap",
+            "twap-sub",
+            "liquidation"
+          ]
+        },
+        "time_in_force": {
+          "type": "string",
+          "enum": [
+            "good-till-time",
+            "immediate-or-cancel",
+            "post-only",
+            "Unknown"
+          ],
+          "default": "good-till-time"
+        },
+        "reduce_only": {
+          "type": "boolean",
+          "format": "boolean",
+          "example": "true"
+        },
+        "trigger_price": {
+          "type": "string",
+          "example": "3024.66"
+        },
+        "order_expiry": {
+          "type": "integer",
+          "format": "int64",
+          "example": "1640995200"
+        },
+        "status": {
+          "type": "string",
+          "example": "open",
+          "enum": [
+            "in-progress",
+            "pending",
+            "open",
+            "filled",
+            "canceled",
+            "canceled-post-only",
+            "canceled-reduce-only",
+            "canceled-position-not-allowed",
+            "canceled-margin-not-allowed",
+            "canceled-too-much-slippage",
+            "canceled-not-enough-liquidity",
+            "canceled-self-trade",
+            "canceled-expired",
+            "canceled-oco",
+            "canceled-child"
+          ]
+        },
+        "trigger_status": {
+          "type": "string",
+          "example": "twap",
+          "enum": [
+            "na",
+            "ready",
+            "mark-price",
+            "twap",
+            "parent-order"
+          ]
+        },
+        "trigger_time": {
+          "type": "integer",
+          "format": "int64",
+          "example": "1640995200"
+        },
+        "parent_order_index": {
+          "type": "integer",
+          "format": "int64",
+          "example": "1"
+        },
+        "parent_order_id": {
+          "type": "string",
+          "example": "1"
+        },
+        "to_trigger_order_id_0": {
+          "type": "string",
+          "example": "1"
+        },
+        "to_trigger_order_id_1": {
+          "type": "string",
+          "example": "1"
+        },
+        "to_cancel_order_id_0": {
+          "type": "string",
+          "example": "1"
+        },
+        "block_height": {
+          "type": "integer",
+          "format": "int64",
+          "example": "45434"
+        },
+        "timestamp": {
+          "type": "integer",
+          "format": "int64",
+          "example": "1640995200"
+        }
+      },
+      "title": "Order",
+      "required": [
+        "order_index",
+        "client_order_index",
+        "order_id",
+        "client_order_id",
+        "market_index",
+        "owner_account_index",
+        "initial_base_amount",
+        "price",
+        "nonce",
+        "remaining_base_amount",
+        "is_ask",
+        "base_size",
+        "base_price",
+        "filled_base_amount",
+        "filled_quote_amount",
+        "side",
+        "type",
+        "time_in_force",
+        "reduce_only",
+        "trigger_price",
+        "order_expiry",
+        "status",
+        "trigger_status",
+        "trigger_time",
+        "parent_order_index",
+        "parent_order_id",
+        "to_trigger_order_id_0",
+        "to_trigger_order_id_1",
+        "to_cancel_order_id_0",
+        "block_height",
+        "timestamp"
+      ]
+    },
+    "OrderBook": {
+      "type": "object",
+      "properties": {
+        "symbol": {
+          "type": "string",
+          "example": "ETH"
+        },
+        "market_id": {
+          "type": "integer",
+          "format": "uint8",
+          "example": "1"
+        },
+        "status": {
+          "type": "string",
+          "example": "active",
+          "enum": [
+            "frozen",
+            "active"
+          ]
+        },
+        "taker_fee": {
+          "type": "string",
+          "example": "0.0001"
+        },
+        "maker_fee": {
+          "type": "string",
+          "example": "0.0000"
+        },
+        "liquidation_fee": {
+          "type": "string",
+          "example": "0.01"
+        },
+        "min_base_amount": {
+          "type": "string",
+          "example": "0.01"
+        },
+        "min_quote_amount": {
+          "type": "string",
+          "example": "0.1"
+        },
+        "supported_size_decimals": {
+          "type": "integer",
+          "format": "uint8",
+          "example": "4"
+        },
+        "supported_price_decimals": {
+          "type": "integer",
+          "format": "uint8",
+          "example": "4"
+        },
+        "supported_quote_decimals": {
+          "type": "integer",
+          "format": "uint8",
+          "example": "4"
+        }
+      },
+      "title": "OrderBook",
+      "required": [
+        "symbol",
+        "market_id",
+        "status",
+        "taker_fee",
+        "maker_fee",
+        "liquidation_fee",
+        "min_base_amount",
+        "min_quote_amount",
+        "supported_size_decimals",
+        "supported_price_decimals",
+        "supported_quote_decimals"
+      ]
+    },
+    "OrderBookDetail": {
+      "type": "object",
+      "properties": {
+        "symbol": {
+          "type": "string",
+          "example": "ETH"
+        },
+        "market_id": {
+          "type": "integer",
+          "format": "uint8",
+          "example": "1"
+        },
+        "status": {
+          "type": "string",
+          "example": "active",
+          "enum": [
+            "frozen",
+            "active"
+          ]
+        },
+        "taker_fee": {
+          "type": "string",
+          "example": "0.0001"
+        },
+        "maker_fee": {
+          "type": "string",
+          "example": "0.0000"
+        },
+        "liquidation_fee": {
+          "type": "string",
+          "example": "0.01"
+        },
+        "min_base_amount": {
+          "type": "string",
+          "example": "0.01"
+        },
+        "min_quote_amount": {
+          "type": "string",
+          "example": "0.1"
+        },
+        "supported_size_decimals": {
+          "type": "integer",
+          "format": "uint8",
+          "example": "4"
+        },
+        "supported_price_decimals": {
+          "type": "integer",
+          "format": "uint8",
+          "example": "4"
+        },
+        "supported_quote_decimals": {
+          "type": "integer",
+          "format": "uint8",
+          "example": "4"
+        },
+        "size_decimals": {
+          "type": "integer",
+          "format": "uint8",
+          "example": "4"
+        },
+        "price_decimals": {
+          "type": "integer",
+          "format": "uint8",
+          "example": "4"
+        },
+        "quote_multiplier": {
+          "type": "integer",
+          "format": "int64",
+          "example": "10000"
+        },
+        "default_initial_margin_fraction": {
+          "type": "integer",
+          "format": "uin16",
+          "example": "100"
+        },
+        "min_initial_margin_fraction": {
+          "type": "integer",
+          "format": "uin16",
+          "example": "100"
+        },
+        "maintenance_margin_fraction": {
+          "type": "integer",
+          "format": "uin16",
+          "example": "50"
+        },
+        "closeout_margin_fraction": {
+          "type": "integer",
+          "format": "uin16",
+          "example": "100"
+        },
+        "last_trade_price": {
+          "type": "number",
+          "format": "double",
+          "example": "3024.66"
+        },
+        "daily_trades_count": {
+          "type": "integer",
+          "format": "int64",
+          "example": "68"
+        },
+        "daily_base_token_volume": {
+          "type": "number",
+          "format": "double",
+          "example": "235.25"
+        },
+        "daily_quote_token_volume": {
+          "type": "number",
+          "format": "double",
+          "example": "93566.25"
+        },
+        "daily_price_low": {
+          "type": "number",
+          "format": "double",
+          "example": "3014.66"
+        },
+        "daily_price_high": {
+          "type": "number",
+          "format": "double",
+          "example": "3024.66"
+        },
+        "daily_price_change": {
+          "type": "number",
+          "format": "double",
+          "example": "3.66"
+        },
+        "open_interest": {
+          "type": "number",
+          "format": "double",
+          "example": "93.0"
+        },
+        "daily_chart": {
+          "type": "object",
+          "example": "{1640995200:3024.66}",
+          "additionalProperties": {
+            "type": "number",
+            "format": "double"
+          }
+        }
+      },
+      "title": "OrderBookDetail",
+      "required": [
+        "symbol",
+        "market_id",
+        "status",
+        "taker_fee",
+        "maker_fee",
+        "liquidation_fee",
+        "min_base_amount",
+        "min_quote_amount",
+        "supported_size_decimals",
+        "supported_price_decimals",
+        "supported_quote_decimals",
+        "size_decimals",
+        "price_decimals",
+        "quote_multiplier",
+        "default_initial_margin_fraction",
+        "min_initial_margin_fraction",
+        "maintenance_margin_fraction",
+        "closeout_margin_fraction",
+        "last_trade_price",
+        "daily_trades_count",
+        "daily_base_token_volume",
+        "daily_quote_token_volume",
+        "daily_price_low",
+        "daily_price_high",
+        "daily_price_change",
+        "open_interest",
+        "daily_chart"
+      ]
+    },
+    "OrderBookDetails": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32",
+          "example": "200"
+        },
+        "message": {
+          "type": "string"
+        },
+        "order_book_details": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/OrderBookDetail"
+          }
+        }
+      },
+      "title": "OrderBookDetails",
+      "required": [
+        "code",
+        "order_book_details"
+      ]
+    },
+    "OrderBookOrders": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32",
+          "example": "200"
+        },
+        "message": {
+          "type": "string"
+        },
+        "total_asks": {
+          "type": "integer",
+          "format": "int64",
+          "example": "1"
+        },
+        "asks": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/SimpleOrder"
+          }
+        },
+        "total_bids": {
+          "type": "integer",
+          "format": "int64",
+          "example": "1"
+        },
+        "bids": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/SimpleOrder"
+          }
+        }
+      },
+      "title": "OrderBookOrders",
+      "required": [
+        "code",
+        "total_asks",
+        "asks",
+        "total_bids",
+        "bids"
+      ]
+    },
+    "OrderBookStats": {
+      "type": "object",
+      "properties": {
+        "symbol": {
+          "type": "string",
+          "example": "ETH"
+        },
+        "last_trade_price": {
+          "type": "number",
+          "format": "double",
+          "example": "3024.66"
+        },
+        "daily_trades_count": {
+          "type": "integer",
+          "format": "int64",
+          "example": "68"
+        },
+        "daily_base_token_volume": {
+          "type": "number",
+          "format": "double",
+          "example": "235.25"
+        },
+        "daily_quote_token_volume": {
+          "type": "number",
+          "format": "double",
+          "example": "93566.25"
+        },
+        "daily_price_change": {
+          "type": "number",
+          "format": "double",
+          "example": "3.66"
+        }
+      },
+      "title": "OrderBookStats",
+      "required": [
+        "symbol",
+        "last_trade_price",
+        "daily_trades_count",
+        "daily_base_token_volume",
+        "daily_quote_token_volume",
+        "daily_price_change"
+      ]
+    },
+    "OrderBooks": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32",
+          "example": "200"
+        },
+        "message": {
+          "type": "string"
+        },
+        "order_books": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/OrderBook"
+          }
+        }
+      },
+      "title": "OrderBooks",
+      "required": [
+        "code",
+        "order_books"
+      ]
+    },
+    "Orders": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32",
+          "example": "200"
+        },
+        "message": {
+          "type": "string"
+        },
+        "next_cursor": {
+          "type": "string"
+        },
+        "orders": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Order"
+          }
+        }
+      },
+      "title": "Orders",
+      "required": [
+        "code",
+        "orders"
+      ]
+    },
+    "PnLEntry": {
+      "type": "object",
+      "properties": {
+        "timestamp": {
+          "type": "integer",
+          "format": "int64",
+          "example": "1640995200"
+        },
+        "value": {
+          "type": "number",
+          "format": "double",
+          "example": "12.0"
+        },
+        "trade_pnl": {
+          "type": "number",
+          "format": "double",
+          "example": "12.0"
+        },
+        "pool_pnl": {
+          "type": "number",
+          "format": "double",
+          "example": "12.0"
+        },
+        "inflow": {
+          "type": "number",
+          "format": "double",
+          "example": "12.0"
+        },
+        "outflow": {
+          "type": "number",
+          "format": "double",
+          "example": "12.0"
+        }
+      },
+      "title": "PnLEntry",
+      "required": [
+        "timestamp",
+        "value",
+        "trade_pnl",
+        "pool_pnl",
+        "inflow",
+        "outflow"
+      ]
+    },
+    "PublicPool": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32",
+          "example": "200"
+        },
+        "message": {
+          "type": "string"
+        },
+        "account_type": {
+          "type": "integer",
+          "format": "uint8",
+          "example": "1"
+        },
+        "index": {
+          "type": "integer",
+          "format": "int64",
+          "example": "1"
+        },
+        "l1_address": {
+          "type": "string",
+          "example": "0x70997970C51812dc3A010C7d01b50e0d17dc79C8"
+        },
+        "cancel_all_time": {
+          "type": "integer",
+          "format": "int64",
+          "example": "1640995200"
+        },
+        "total_order_count": {
+          "type": "integer",
+          "format": "int64",
+          "example": "100"
+        },
+        "pending_order_count": {
+          "type": "integer",
+          "format": "int64",
+          "example": "100"
+        },
+        "status": {
+          "type": "integer",
+          "format": "uint8",
+          "example": "1"
+        },
+        "collateral": {
+          "type": "string",
+          "example": "46342"
+        },
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "can_invite": {
+          "type": "boolean",
+          "format": "boolean"
+        },
+        "referral_points_percentage": {
+          "type": "string"
+        },
+        "max_referral_usage_limit": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "total_asset_value": {
+          "type": "string",
+          "example": "19995"
+        },
+        "pool_info": {
+          "$ref": "#/definitions/PublicPoolInfo"
+        },
+        "account_share": {
+          "$ref": "#/definitions/PublicPoolShare"
+        }
+      },
+      "title": "PublicPool",
+      "required": [
+        "code",
+        "account_type",
+        "index",
+        "l1_address",
+        "cancel_all_time",
+        "total_order_count",
+        "pending_order_count",
+        "status",
+        "collateral",
+        "name",
+        "description",
+        "can_invite",
+        "referral_points_percentage",
+        "max_referral_usage_limit",
+        "total_asset_value",
+        "pool_info"
+      ]
+    },
+    "PublicPoolInfo": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "type": "integer",
+          "format": "uint8",
+          "example": "0"
+        },
+        "operator_fee": {
+          "type": "string",
+          "example": "100"
+        },
+        "min_operator_share_rate": {
+          "type": "string",
+          "example": "200"
+        },
+        "total_shares": {
+          "type": "integer",
+          "format": "int64",
+          "example": "100000"
+        },
+        "operator_shares": {
+          "type": "integer",
+          "format": "int64",
+          "example": "20000"
+        },
+        "share_price_1d": {
+          "type": "number",
+          "format": "double",
+          "example": "0.0001"
+        },
+        "share_price_7d": {
+          "type": "number",
+          "format": "double",
+          "example": "0.0001"
+        },
+        "share_price_30d": {
+          "type": "number",
+          "format": "double",
+          "example": "0.0001"
+        },
+        "annual_percentage_yield": {
+          "type": "number",
+          "format": "double",
+          "example": "20.5000"
+        },
+        "daily_returns": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/DailyReturn"
+          }
+        }
+      },
+      "title": "PublicPoolInfo",
+      "required": [
+        "status",
+        "operator_fee",
+        "min_operator_share_rate",
+        "total_shares",
+        "operator_shares",
+        "share_price_1d",
+        "share_price_7d",
+        "share_price_30d",
+        "annual_percentage_yield",
+        "daily_returns"
+      ]
+    },
+    "PublicPoolShare": {
+      "type": "object",
+      "properties": {
+        "public_pool_index": {
+          "type": "integer",
+          "format": "int64",
+          "example": "1"
+        },
+        "shares_amount": {
+          "type": "integer",
+          "format": "int64",
+          "example": "3000"
+        },
+        "entry_usdc": {
+          "type": "string",
+          "example": "3000"
+        }
+      },
+      "title": "PublicPoolShare",
+      "required": [
+        "public_pool_index",
+        "shares_amount",
+        "entry_usdc"
+      ]
+    },
+    "PublicPools": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32",
+          "example": "200"
+        },
+        "message": {
+          "type": "string"
+        },
+        "total": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "public_pools": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/PublicPool"
+          }
+        }
+      },
+      "title": "PublicPools",
+      "required": [
+        "code",
+        "total",
+        "public_pools"
+      ]
+    },
+    "ReqSendTx": {
+      "type": "object",
+      "properties": {
+        "tx_type": {
+          "type": "integer",
+          "format": "uint8"
+        },
+        "tx_info": {
+          "type": "string"
+        },
+        "price_protection": {
+          "type": "boolean",
+          "format": "boolean",
+          "default": "true"
+        }
+      },
+      "title": "ReqSendTx",
+      "required": [
+        "tx_type",
+        "tx_info"
+      ]
+    },
+    "ReqSendTxBatch": {
+      "type": "object",
+      "properties": {
+        "tx_types": {
+          "type": "string"
+        },
+        "tx_infos": {
+          "type": "string"
+        }
+      },
+      "title": "ReqSendTxBatch",
+      "required": [
+        "tx_types",
+        "tx_infos"
+      ]
+    },
+    "ResultCode": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32",
+          "example": "200"
+        },
+        "message": {
+          "type": "string"
+        }
+      },
+      "title": "ResultCode",
+      "required": [
+        "code"
+      ]
+    },
+    "SimpleOrder": {
+      "type": "object",
+      "properties": {
+        "order_index": {
+          "type": "integer",
+          "format": "int64",
+          "example": "1"
+        },
+        "order_id": {
+          "type": "string",
+          "example": "1"
+        },
+        "owner_account_index": {
+          "type": "integer",
+          "format": "int64",
+          "example": "1"
+        },
+        "initial_base_amount": {
+          "type": "string",
+          "example": "0.1"
+        },
+        "remaining_base_amount": {
+          "type": "string",
+          "example": "0.1"
+        },
+        "price": {
+          "type": "string",
+          "example": "3024.66"
+        },
+        "order_expiry": {
+          "type": "integer",
+          "format": "int64",
+          "example": "1640995200"
+        }
+      },
+      "title": "SimpleOrder",
+      "required": [
+        "order_index",
+        "order_id",
+        "owner_account_index",
+        "initial_base_amount",
+        "remaining_base_amount",
+        "price",
+        "order_expiry"
+      ]
+    },
+    "Status": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "type": "integer",
+          "format": "int32",
+          "example": "1"
+        },
+        "network_id": {
+          "type": "integer",
+          "format": "int32",
+          "example": "1"
+        },
+        "timestamp": {
+          "type": "integer",
+          "format": "int64",
+          "example": "1717777777"
+        }
+      },
+      "title": "Status",
+      "required": [
+        "status",
+        "network_id",
+        "timestamp"
+      ]
+    },
+    "SubAccounts": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32",
+          "example": "200"
+        },
+        "message": {
+          "type": "string"
+        },
+        "l1_address": {
+          "type": "string",
+          "example": "0x70997970C51812dc3A010C7d01b50e0d17dc79C8"
+        },
+        "sub_accounts": {
+          "type": "array",
+          "example": "1",
+          "items": {
+            "$ref": "#/definitions/Account"
+          }
+        }
+      },
+      "title": "SubAccounts",
+      "required": [
+        "code",
+        "l1_address",
+        "sub_accounts"
+      ]
+    },
+    "Trade": {
+      "type": "object",
+      "properties": {
+        "trade_id": {
+          "type": "integer",
+          "format": "int64",
+          "example": "145"
+        },
+        "tx_hash": {
+          "type": "string",
+          "example": "0x70997970C51812dc3A010C7d01b50e0d17dc79C8"
+        },
+        "type": {
+          "type": "string",
+          "example": "trade",
+          "enum": [
+            "trade",
+            "liquidation",
+            "deleverage"
+          ]
+        },
+        "market_id": {
+          "type": "integer",
+          "format": "uint8",
+          "example": "1"
+        },
+        "size": {
+          "type": "string",
+          "example": "0.1"
+        },
+        "price": {
+          "type": "string",
+          "example": "3024.66"
+        },
+        "usd_amount": {
+          "type": "string",
+          "example": "3024.66"
+        },
+        "ask_id": {
+          "type": "integer",
+          "format": "int64",
+          "example": "145"
+        },
+        "bid_id": {
+          "type": "integer",
+          "format": "int64",
+          "example": "245"
+        },
+        "ask_account_id": {
+          "type": "integer",
+          "format": "int64",
+          "example": "1"
+        },
+        "bid_account_id": {
+          "type": "integer",
+          "format": "int64",
+          "example": "3"
+        },
+        "is_maker_ask": {
+          "type": "boolean",
+          "format": "boolean",
+          "example": "true"
+        },
+        "block_height": {
+          "type": "integer",
+          "format": "int64",
+          "example": "45434"
+        },
+        "timestamp": {
+          "type": "integer",
+          "format": "int64",
+          "example": "1640995200"
+        }
+      },
+      "title": "Trade",
+      "required": [
+        "trade_id",
+        "tx_hash",
+        "type",
+        "market_id",
+        "size",
+        "price",
+        "usd_amount",
+        "ask_id",
+        "bid_id",
+        "ask_account_id",
+        "bid_account_id",
+        "is_maker_ask",
+        "block_height",
+        "timestamp"
+      ]
+    },
+    "Trades": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32",
+          "example": "200"
+        },
+        "message": {
+          "type": "string"
+        },
+        "next_cursor": {
+          "type": "string"
+        },
+        "trades": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Trade"
+          }
+        }
+      },
+      "title": "Trades",
+      "required": [
+        "code",
+        "trades"
+      ]
+    },
+    "Tx": {
+      "type": "object",
+      "properties": {
+        "hash": {
+          "type": "string",
+          "example": "0x70997970C51812dc3A010C7d01b50e0d17dc79C8"
+        },
+        "type": {
+          "type": "integer",
+          "format": "uint8",
+          "example": "1",
+          "maximum": 64,
+          "minimum": 1
+        },
+        "info": {
+          "type": "string",
+          "example": "{}"
+        },
+        "event_info": {
+          "type": "string",
+          "example": "{}"
+        },
+        "status": {
+          "type": "integer",
+          "format": "int64",
+          "example": "1"
+        },
+        "transaction_index": {
+          "type": "integer",
+          "format": "int64",
+          "example": "8761"
+        },
+        "l1_address": {
+          "type": "string",
+          "example": "0x70997970C51812dc3A010C7d01b50e0d17dc79C8"
+        },
+        "account_index": {
+          "type": "integer",
+          "format": "int64",
+          "example": "1"
+        },
+        "nonce": {
+          "type": "integer",
+          "format": "int64",
+          "example": "722"
+        },
+        "expire_at": {
+          "type": "integer",
+          "format": "int64",
+          "example": "1640995200"
+        },
+        "block_height": {
+          "type": "integer",
+          "format": "int64",
+          "example": "45434"
+        },
+        "queued_at": {
+          "type": "integer",
+          "format": "int64",
+          "example": "1640995200"
+        },
+        "executed_at": {
+          "type": "integer",
+          "format": "int64",
+          "example": "1640995200"
+        },
+        "sequence_index": {
+          "type": "integer",
+          "format": "int64",
+          "example": "8761"
+        },
+        "parent_hash": {
+          "type": "string",
+          "example": "0x70997970C51812dc3A010C7d01b50e0d17dc79C8"
+        }
+      },
+      "title": "Tx",
+      "required": [
+        "hash",
+        "type",
+        "info",
+        "event_info",
+        "status",
+        "transaction_index",
+        "l1_address",
+        "account_index",
+        "nonce",
+        "expire_at",
+        "block_height",
+        "queued_at",
+        "executed_at",
+        "sequence_index",
+        "parent_hash"
+      ]
+    },
+    "TxHash": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32",
+          "example": "200"
+        },
+        "message": {
+          "type": "string"
+        },
+        "tx_hash": {
+          "type": "string",
+          "example": "0x70997970C51812dc3A010C7d01b50e0d17dc79C8"
+        }
+      },
+      "title": "TxHash",
+      "required": [
+        "code",
+        "tx_hash"
+      ]
+    },
+    "TxHashes": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32",
+          "example": "200"
+        },
+        "message": {
+          "type": "string"
+        },
+        "tx_hash": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "title": "TxHashes",
+      "required": [
+        "code",
+        "tx_hash"
+      ]
+    },
+    "Txs": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32",
+          "example": "200"
+        },
+        "message": {
+          "type": "string"
+        },
+        "txs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Tx"
+          }
+        }
+      },
+      "title": "Txs",
+      "required": [
+        "code",
+        "txs"
+      ]
+    },
+    "WithdrawHistory": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32",
+          "example": "200"
+        },
+        "message": {
+          "type": "string"
+        },
+        "withdraws": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/WithdrawHistoryItem"
+          }
+        },
+        "cursor": {
+          "type": "string"
+        }
+      },
+      "title": "WithdrawHistory",
+      "required": [
+        "code",
+        "withdraws",
+        "cursor"
+      ]
+    },
+    "WithdrawHistoryItem": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "amount": {
+          "type": "string",
+          "example": "0.1"
+        },
+        "timestamp": {
+          "type": "integer",
+          "format": "int64",
+          "example": "1640995200"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "failed",
+            "pending",
+            "claimable",
+            "refunded",
+            "completed"
+          ]
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "secure",
+            "fast"
+          ]
+        },
+        "l1_tx_hash": {
+          "type": "string",
+          "example": "0x70997970C51812dc3A010C7d01b50e0d17dc79C8"
+        }
+      },
+      "title": "WithdrawHistoryItem",
+      "required": [
+        "id",
+        "amount",
+        "timestamp",
+        "status",
+        "type",
+        "l1_tx_hash"
+      ]
+    },
+    "ZkLighterInfo": {
+      "type": "object",
+      "properties": {
+        "contract_address": {
+          "type": "string",
+          "example": "0x70997970C51812dc3A010C7d01b50e0d17dc79C8"
+        }
+      },
+      "title": "ZkLighterInfo",
+      "required": [
+        "contract_address"
+      ]
+    }
+  },
+  "securityDefinitions": {
+    "apiKey": {
+      "type": "apiKey",
+      "description": "Enter JWT Bearer token **_only_**",
+      "name": "Authorization",
+      "in": "header"
+    }
+  }
+}
