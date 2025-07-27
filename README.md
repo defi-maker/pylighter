@@ -1,6 +1,6 @@
-# Lighter Protocol Python SDK
+# PyLighter - Lighter Protocol 网格交易机器人
 
-一个用于 Lighter Protocol 去中心化交易所的 Python SDK，支持现货和合约交易。
+专为 Lighter Protocol 去中心化交易所开发的 Python 网格交易机器人，实现高频自动化交易策略。
 
 ## 快速开始
 
@@ -12,11 +12,70 @@ uv sync
 ### 环境配置
 创建 `.env` 文件：
 ```bash
-LIGHTER_KEY=0x... # 你的钱包地址
+LIGHTER_KEY=0x... # 你的钱包地址  
 LIGHTER_SECRET=... # 你的私钥
 ```
 
-### 基础使用
+### 网格策略快速启动
+```bash
+# 模拟测试（推荐先运行）
+uv run grid_strategy.py --dry-run --symbol SUI
+
+# 实盘交易
+uv run grid_strategy.py --symbol SUI
+
+# 其他支持币种
+uv run grid_strategy.py --symbol TON --dry-run
+uv run grid_strategy.py --symbol BTC --dry-run
+```
+
+## 项目结构
+
+```
+pylighter/
+├── pylighter/              # 核心 SDK
+│   ├── client.py           # 主要客户端类
+│   └── httpx.py            # HTTP 客户端
+├── examples/               # 示例代码
+├── docs/                   # 文档
+├── grid_strategy.py        # 网格策略 (主要文件)
+└── main.py                 # 主入口
+```
+
+## 核心功能
+
+### 🤖 网格交易策略 (推荐)
+
+**自动化高频交易机器人**，基于 Binance 网格策略完全重构：
+
+#### 核心特性
+- ✅ **0% 手续费优势**: Lighter Protocol 零手续费，每笔交易纯利润  
+- ✅ **高频策略**: 0.03% 网格间距，100x 频率于传统交易所
+- ✅ **双向持仓**: 同时做多/做空，最大化收益机会
+- ✅ **智能风控**: 5x 杠杆，订单限制，自动清理
+- ✅ **实时同步**: WebSocket 实时价格和订单状态
+- ✅ **稳定重连**: 自动重连机制，确保 24/7 稳定运行
+
+#### 支持币种
+- **SUI**: 当前主推币种 (已优化)
+- **TON**: 原始适配币种
+- **BTC**: 高价值币种支持
+
+#### 安全特性
+```bash
+# 信号处理 - Ctrl+C 优雅关闭
+✅ 自动取消所有活跃订单
+✅ 保留现有持仓 (防止意外损失)
+✅ 完整状态清理
+
+# 订单管理
+✅ 最大8个活跃订单限制
+✅ 自动过期订单清理 (5分钟)
+✅ WebSocket 订单状态同步
+```
+
+### 📚 基础 SDK 功能
+
 ```python
 from pylighter.client import Lighter
 
@@ -26,117 +85,143 @@ await lighter.init_client()
 
 # 下限价单
 tx_info, tx_hash, error = await lighter.limit_order(
-    ticker="TON",
-    amount=3.2,  # 正数=买入/做多，负数=卖出/做空
-    price=3.15,
+    ticker="SUI",
+    amount=3.0,  # 正数=买入/做多，负数=卖出/做空
+    price=4.25,
     tif='GTC'
 )
+
+# 获取账户信息
+account_info = await lighter.get_account_info()
+
+# 查看持仓
+positions = await lighter.get_positions()
+
+# 取消所有订单
+await lighter.cancel_all_orders()
 ```
 
-## 项目结构
+## 使用指南
 
+### 🚀 网格策略启动流程
+
+1. **环境准备**
+```bash
+# 克隆项目
+git clone <repository_url>
+cd pylighter
+
+# 安装依赖
+uv sync
+
+# 配置环境变量
+echo "LIGHTER_KEY=0x..." > .env
+echo "LIGHTER_SECRET=..." >> .env
 ```
-lighter_py/
-├── pylighter/           # 核心 SDK
-│   ├── client.py       # 主要客户端类
-│   └── httpx.py        # HTTP 客户端
-├── examples/           # 示例代码
-├── docs/              # 文档
-├── strategies/        # 交易策略 (已清理)
-├── grid_strategy_ton.py # 网格策略 (主要)
-└── main.py            # 主入口
+
+2. **策略测试**
+```bash
+# 模拟模式测试 (无风险)
+uv run grid_strategy.py --dry-run --symbol SUI
+
+# 检查日志
+tail -f log/grid_strategy.log
 ```
 
-## 主要功能
+3. **实盘部署**
+```bash
+# 启动实盘交易 (需要输入 YES 确认)
+uv run grid_strategy.py --symbol SUI
 
-### 1. 基础交易 
-- 限价单/市价单
-- 订单取消
-- 账户查询
-- 持仓管理
+# 优雅停止 (Ctrl+C)
+# 自动取消订单并保留持仓
+```
 
-### 2. 网格策略
-基于参考的网格策略，完全适配 Binance 策略逻辑：
+### 📊 监控和管理
 
 ```bash
-# 模拟测试（推荐先运行）
-uv run grid_strategy_ton.py --dry-run
+# 实时监控日志
+tail -f log/grid_strategy.log
 
-# 实盘交易
-uv run grid_strategy_ton.py
+# 查看策略运行状态
+grep "📋 Orders" log/grid_strategy.log | tail -10
 
-# 使用其他币种
-uv run grid_strategy_ton.py --symbol XRP --dry-run
+# 检查错误和警告
+grep -E "(ERROR|WARNING)" log/grid_strategy.log | tail -5
 ```
 
-**特点:**
-- 使用 TON 币种，基于统一的 $10 最小交易额
-- 5倍杠杆，风险可控
-- 0.1% 网格间距
-- 双向持仓策略
-- 智能风险控制
+## ⚠️ 重要提醒
 
-### 3. 分析工具
-- 市场数据查询
-- 最小交易量分析
-- 币种成本比较
-- 订单簿分析
+### 🔐 安全风险
+- **真实资金交易**: 请先小额测试，熟悉策略后再增加资金
+- **私钥安全**: 妥善保管私钥，使用 `.env` 文件，不要提交到代码库
+- **网络风险**: 确保网络连接稳定，避免在不稳定网络环境下运行
 
-## 完整文档
+### 📋 交易风险
+- **市场风险**: 网格策略适合震荡行情，单边行情可能导致亏损
+- **杠杆风险**: 5x 杠杆会放大收益和损失，请谨慎使用
+- **技术风险**: 程序故障可能导致意外损失，建议监控运行状态
 
-### 核心文档
-- [API 参考](docs/api-reference.md) - 完整 API 文档
-- [网格策略指南](docs/grid-strategy-guide.md) - 网格策略详解
-- [示例指南](docs/examples-guide.md) - 示例代码说明
+### 🛠️ 技术要求
+- **Python 版本**: 需要 Python ≥3.13
+- **依赖管理**: 使用 `uv` 包管理器
+- **API 访问**: 需要有效的 Lighter Protocol 账户和 API 密钥
 
-### 参考信息
-- [支持币种](docs/supported-tokens.md)
-- [常见问题](docs/faq.md)
-- [故障排除](docs/troubleshooting.md)
+## 🔧 故障排除
 
-## 示例代码
+### 常见问题
 
-### 分析支持币种
+**Q: WebSocket 连接频繁断开**
 ```bash
-uv run examples/analyze_minimum_order_amounts.py
+# 检查网络连接稳定性
+ping mainnet.zklighter.elliot.ai
+
+# 查看 WebSocket 重连日志
+grep "Retrying WebSocket" log/grid_strategy.log
 ```
 
-### 测试合约交易
+**Q: 订单无法成交**
 ```bash
-uv run examples/ton_contract_trading.py
+# 检查市场流动性和价格设置
+grep "Order placed" log/grid_strategy.log | tail -5
+
+# 查看订单同步状态
+grep "📋 Orders" log/grid_strategy.log | tail -10
 ```
 
-### 多币种交易
+**Q: 程序意外退出**
 ```bash
-uv run examples/multi_symbol_trading.py
+# 查看错误日志
+grep "ERROR" log/grid_strategy.log | tail -10
+
+# 检查 API 密钥配置
+cat .env
 ```
 
-## 重要提醒
+## 📊 技术架构
 
-- **真实资金交易**: 请先小额测试再增加资金
-- **风险控制**: 使用合理的杠杆比例
-- **网络稳定**: 确保网络连接稳定
-- **API 限制**: 注意交易频率限制
+### 核心组件
+- **`pylighter/client.py`**: 主要 API 客户端，封装 Lighter Protocol REST API
+- **`pylighter/httpx.py`**: HTTP 客户端，处理网络请求和错误重试
+- **`grid_strategy.py`**: 网格交易策略核心实现
 
-## 安全最佳实践
+### 设计特点
+- **异步架构**: 全异步设计，支持高并发 WebSocket 和 API 调用
+- **错误恢复**: 自动重连和错误重试机制
+- **状态管理**: 精确的订单和持仓状态跟踪
+- **日志系统**: 详细的运行日志，便于监控和调试
 
-1. **环境变量**: 使用环境变量存储敏感信息
-2. **测试优先**: 优先使用模拟模式测试策略
-3. **资金管理**: 合理分配交易资金
-4. **监控机制**: 实时监控策略运行状态
+## 📖 更多资源
 
-## 获取帮助
+### 参考文档
+- [Lighter Protocol 官方文档](https://docs.lighter.xyz/)
+- [项目内文档](docs/) - API 参考和策略指南
+- [示例代码](examples/) - 实用示例和测试脚本
 
-- 查看 [examples/](examples/) 目录获取示例代码
-- 阅读 [docs/](docs/) 目录获取详细文档
-- 参考 [CLAUDE.md](CLAUDE.md) 了解项目信息
-
-## 技术特色
-
-- **低成本交易**: 基于 Lighter Protocol 去中心化交易所
-- **智能策略**: 完整实现网格交易策略
-- **API 集成**: 原生支持 Lighter Protocol API
+### 社区支持
+- 查看 [issues](https://github.com/your-repo/issues) 获取帮助
+- 参考 [CLAUDE.md](CLAUDE.md) 了解开发信息
 
 ---
 
-**免责声明**: 本 SDK 仅供学习和研究使用，使用时请注意风险控制。
+**免责声明**: 本工具仅供学习和研究使用，请自行承担交易风险。开发者不对使用本工具造成的任何损失负责。

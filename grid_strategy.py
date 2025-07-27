@@ -31,12 +31,9 @@ os.makedirs("log", exist_ok=True)
 # ==================== Configuration ====================
 COIN_NAME = "TON"
 GRID_SPACING = 0.0003       # 0.03% grid spacing (ultra-high frequency for zero fees!)
-INITIAL_QUANTITY = 3        # Base quantity (will be adjusted)
+DEFAULT_ORDER_AMOUNT = 10.0  # Default order amount in USD (quote currency)
 LEVERAGE = 5                # Leverage for TON (conservative vs OKX's 50x)
-POSITION_THRESHOLD = 60     # Position threshold
-POSITION_LIMIT = 20         # Position limit
 SYNC_TIME = 10              # Sync interval (seconds)
-ORDER_FIRST_TIME = 10       # Order placement interval
 UPDATE_INTERVAL = 5         # Price update interval
 MAX_ACTIVE_ORDERS = 8       # Maximum active orders
 
@@ -65,7 +62,7 @@ logging.getLogger('lighter').setLevel(logging.INFO)
 class SimplifiedGridBot:
     """Simplified Grid Trading Bot for Lighter Protocol"""
     
-    def __init__(self, dry_run=False):
+    def __init__(self, dry_run=False, order_amount=None):
         self.dry_run = dry_run
         self.lighter = None
         self.ws_client = None
@@ -74,6 +71,9 @@ class SimplifiedGridBot:
         self.grid_spacing = GRID_SPACING
         self.leverage = LEVERAGE
         
+        # Order amount configuration
+        self.order_amount = order_amount or DEFAULT_ORDER_AMOUNT  # USD amount per order
+        
         # Shutdown control
         self.shutdown_requested = False
         
@@ -81,18 +81,23 @@ class SimplifiedGridBot:
         self.min_quote_amount = 10.0
         self.price_precision = 6
         self.amount_precision = 1
+        self.step_size = None  # Will be calculated from amount_precision
         
-        # Position tracking (enhanced with OKX-style order counting)
+        # Position tracking
         self.long_position = 0
         self.short_position = 0
-        self.long_initial_quantity = INITIAL_QUANTITY
-        self.short_initial_quantity = INITIAL_QUANTITY
+        self.long_initial_quantity = 0  # Will be calculated dynamically
+        self.short_initial_quantity = 0  # Will be calculated dynamically
         
-        # Order counting (OKX-style)
+        # Order counting (OKX-style) - 添加这些变量
         self.buy_long_orders = 0.0    # Long buy orders count
         self.sell_long_orders = 0.0   # Long sell orders count
         self.sell_short_orders = 0.0  # Short sell orders count
         self.buy_short_orders = 0.0   # Short buy orders count
+        
+        # 网格订单数量（参考OKX）
+        self.long_initial_quantity = 0  # Will be calculated dynamically
+        self.short_initial_quantity = 0  # Will be calculated dynamically
         
         # Price tracking
         self.latest_price = 0
@@ -100,15 +105,18 @@ class SimplifiedGridBot:
         self.best_ask_price = None
         self.price_updated = False
         
-        # Order tracking (simplified)
+        # Order tracking
         self.active_orders = {}  # order_id -> order_info
-        self.last_long_order_time = 0
-        self.last_short_order_time = 0
         self.last_position_update_time = 0
+        
+        # Enhanced order management
+        self.max_orders = 8  # Restore original limit for better grid coverage
+        self.sync_warning_throttle = {}  # Throttle sync warnings by type
         
         # WebSocket connection status
         self.ws_connected = False
         self.account_ws_client = None  # Official lighter WebSocket client for account updates
+        self._last_account_update_time = None  # Track when we last received account updates
         
     async def setup(self):
         """Initialize the Lighter client"""
@@ -142,18 +150,24 @@ class SimplifiedGridBot:
         await self.update_positions()
         
     async def fetch_market_constraints(self):
-        """Fetch market constraints"""
+        """Fetch market constraints and calculate step_size"""
         try:
             constraints = await self.lighter.get_market_constraints(self.symbol)
             self.min_quote_amount = constraints['min_quote_amount']
             self.price_precision = constraints['price_precision']
             self.amount_precision = constraints['amount_precision']
-            logger.info(f"Constraints: min_quote=${self.min_quote_amount}, price_precision={self.price_precision}")
+            
+            # Calculate step_size from amount_precision (simplified approach)
+            self.step_size = 10 ** (-self.amount_precision)
+            
+            logger.info(f"Constraints: min_quote=${self.min_quote_amount}, price_precision={self.price_precision}, amount_precision={self.amount_precision}")
+            logger.info(f"Calculated step_size: {self.step_size}, Order amount: ${self.order_amount} USD per order")
         except Exception as e:
             logger.warning(f"Failed to fetch constraints: {e}, using defaults")
             self.min_quote_amount = 10.0
             self.price_precision = 6
             self.amount_precision = 1
+            self.step_size = 0.1  # Default step size
     
     async def init_websocket(self):
         """Initialize WebSocket client for price updates"""
@@ -223,15 +237,55 @@ class SimplifiedGridBot:
             logger.error(f"❌ WebSocket initialization failed: {e}")
             raise
     
-    def update_initial_quantities(self):
-        """Update quantities based on current price"""
-        if self.latest_price > 0:
-            base_quantity = self.lighter.calculate_min_quantity_for_quote_amount(
-                self.latest_price, self.min_quote_amount, self.symbol
+    def calculate_order_quantity(self, price):
+        """Calculate order quantity based on configured USD amount and step_size"""
+        try:
+            if price <= 0:
+                return 0
+            
+            # Calculate base quantity from USD amount
+            base_quantity = self.order_amount / price
+            
+            # Round to step_size (which is derived from amount_precision)
+            if self.step_size and self.step_size > 0:
+                # Round down to nearest step_size multiple
+                quantity = math.floor(base_quantity / self.step_size) * self.step_size
+                
+                # Ensure minimum quantity
+                if quantity < self.step_size:
+                    quantity = self.step_size
+            else:
+                # Fallback to amount_precision rounding
+                quantity = round(base_quantity, self.amount_precision)
+            
+            # Validate minimum quote amount
+            quote_value = quantity * price
+            if quote_value < self.min_quote_amount:
+                # Adjust quantity to meet minimum quote requirement
+                min_quantity = self.min_quote_amount / price
+                if self.step_size and self.step_size > 0:
+                    quantity = math.ceil(min_quantity / self.step_size) * self.step_size
+                else:
+                    quantity = round(min_quantity, self.amount_precision)
+            
+            return quantity
+            
+        except Exception as e:
+            logger.error(f"Failed to calculate order quantity: {e}")
+            # Fallback to original method
+            return self.lighter.calculate_min_quantity_for_quote_amount(
+                price, max(self.order_amount, self.min_quote_amount), self.symbol
             )
-            self.long_initial_quantity = base_quantity
-            self.short_initial_quantity = base_quantity
-            logger.info(f"Updated quantities based on price ${self.latest_price:.6f}: {base_quantity:.1f} {self.symbol}")
+    
+    def update_initial_quantities(self):
+        """Update quantities based on current price and configured order amount (OKX-style)"""
+        if self.latest_price > 0:
+            calculated_quantity = self.calculate_order_quantity(self.latest_price)
+            self.long_initial_quantity = calculated_quantity
+            self.short_initial_quantity = calculated_quantity
+            
+            quote_value = calculated_quantity * self.latest_price
+            logger.info(f"Updated quantities based on price ${self.latest_price:.6f}: {calculated_quantity:.{self.amount_precision}f} {self.symbol} (${quote_value:.2f})")
     
     async def update_positions(self):
         """Update current positions (simplified)"""
@@ -253,26 +307,44 @@ class SimplifiedGridBot:
         self.sell_short_orders = 0.0
         self.buy_short_orders = 0.0
         
-        # Count active orders by type
+        # Count active orders by type using same logic as WebSocket handler
         for order_id, order_info in self.active_orders.items():
             side = order_info.get('side', '')
-            position_type = order_info.get('position_type', '')
             quantity = order_info.get('quantity', 0)
             
-            if side == 'buy' and position_type == 'long':
-                self.buy_long_orders += quantity
-            elif side == 'sell' and position_type == 'long':
-                self.sell_long_orders += quantity
-            elif side == 'sell' and position_type == 'short':
-                self.sell_short_orders += quantity
-            elif side == 'buy' and position_type == 'short':
-                self.buy_short_orders += quantity
+            # Use same classification logic as WebSocket handler
+            if side == 'buy':
+                # Buy orders are typically long entries or short exits
+                if self.short_position > 0:
+                    # If we have short position, buy could be short exit
+                    self.buy_short_orders += quantity
+                else:
+                    # Otherwise, it's long entry
+                    self.buy_long_orders += quantity
+            elif side == 'sell':
+                # Sell orders are typically short entries or long exits
+                if self.long_position > 0:
+                    # If we have long position, sell could be long exit
+                    self.sell_long_orders += quantity
+                else:
+                    # Otherwise, it's short entry
+                    self.sell_short_orders += quantity
         
-        logger.debug(f"Order counts: Long(buy={self.buy_long_orders:.1f}, sell={self.sell_long_orders:.1f}), Short(sell={self.sell_short_orders:.1f}, buy={self.buy_short_orders:.1f})")
+        # Debug log order counts
+        active_count = len(self.active_orders)
+        if active_count > 0:
+            logger.debug(f"Order counts: {active_count} active orders - Long(buy={self.buy_long_orders:.1f}, sell={self.sell_long_orders:.1f}), Short(sell={self.sell_short_orders:.1f}, buy={self.buy_short_orders:.1f})")
+        else:
+            logger.debug("Order counts: 0 active orders")
     
     async def place_order(self, side, price, quantity, position_type='long'):
-        """Place an order (simplified)"""
+        """Place an order with order limit control"""
         try:
+            # Check order limits only
+            if len(self.active_orders) >= self.max_orders:
+                logger.warning(f"Max orders ({self.max_orders}) reached, skipping order placement")
+                return None
+            
             # Validate and format
             formatted_price = self.lighter.format_price(price, self.symbol)
             is_valid, formatted_quantity, error_msg = self.lighter.validate_order_amount(
@@ -346,7 +418,7 @@ class SimplifiedGridBot:
                     except:
                         pass  # Use timestamp ID as fallback
                 
-                # Track order (simplified)
+                # Track order
                 self.active_orders[order_id] = {
                     'side': side,
                     'price': formatted_price,
@@ -355,14 +427,8 @@ class SimplifiedGridBot:
                     'timestamp': time.time(),
                     'tx_hash': str(tx_hash) if tx_hash else None
                 }
+                
                 logger.info(f"✅ Order placed: {order_id}")
-                
-                # Update cooldowns
-                if position_type == 'long':
-                    self.last_long_order_time = time.time()
-                else:
-                    self.last_short_order_time = time.time()
-                
                 return order_id
             else:
                 logger.error(f"Unexpected result format: {result}")
@@ -373,108 +439,240 @@ class SimplifiedGridBot:
             return None
     
     async def setup_account_orders_websocket(self):
-        """Setup WebSocket subscription using official lighter.WsClient"""
+        """Setup WebSocket subscription for account orders with proper authentication"""
         try:
             if self.dry_run:
                 logger.info("🔄 DRY RUN - Would setup account orders WebSocket")
                 return
                 
-            import lighter
+            logger.info("🔌 Setting up account orders WebSocket with authentication...")
             
-            logger.info("🔌 Setting up account orders WebSocket using official WsClient...")
+            # Generate authentication token using SignerClient
+            auth_token = self.lighter.client.create_auth_token_with_expiry()
+            if not auth_token or len(auth_token) < 2 or auth_token[1]:  # Check for error
+                logger.error(f"Failed to generate auth token: {auth_token}")
+                return
             
-            def on_account_update(account_id, account_data):
-                """Handle account updates from WebSocket"""
-                try:
-                    # Process account updates for order fills
-                    asyncio.create_task(self.handle_account_update(account_id, account_data))
-                except Exception as e:
-                    logger.error(f"Error in account update handler: {e}")
+            auth_token_str = auth_token[0]  # Extract token string
+            logger.info("✅ Authentication token generated successfully")
             
-            def on_order_book_update(market_id, order_book):
-                """Handle order book updates (not used for order tracking)"""
-                pass
+            # Create custom WebSocket client for account orders
+            import websockets
+            import asyncio
             
-            # Create custom WebSocket client that handles ping messages
-            class PingHandlingWsClient(lighter.WsClient):
-                async def handle_ping_message(self, websocket, message):
-                    """Handle ping messages with proper pong response"""
-                    try:
-                        if isinstance(message, dict):
-                            message_type = message.get('type', '')
-                            if message_type == 'ping':
-                                # Send pong response immediately
-                                pong_response = {"type": "pong"}
-                                await websocket.send(json.dumps(pong_response))
-                                logger.debug("Account WebSocket: Sent pong response to ping")
-                                return True
-                            elif message_type == 'pong':
-                                logger.debug("Account WebSocket: Received pong response")
-                                return True
-                        return False
-                    except Exception as e:
-                        logger.debug(f"Account WebSocket ping/pong error: {e}")
-                        return False
-                
-                def handle_unhandled_message(self, message):
-                    """Override to handle ping messages gracefully"""
-                    try:
-                        message_type = message.get('type', '') if isinstance(message, dict) else ''
-                        if message_type in ['ping', 'pong']:
-                            # Create async task for ping/pong handling if we have websocket access
-                            if hasattr(self, '_websocket') and self._websocket:
-                                asyncio.create_task(self.handle_ping_message(self._websocket, message))
-                            else:
-                                logger.debug(f"Account WebSocket: Received {message_type} (no websocket access)")
-                            return
-                        else:
-                            # Log other unhandled messages but don't raise exception
-                            logger.warning(f"Unhandled account WebSocket message: {message}")
-                    except Exception as e:
-                        logger.debug(f"Error handling unhandled message: {e}")
-            
-            # Create WebSocket client with account subscription
-            self.account_ws_client = PingHandlingWsClient(
-                order_book_ids=[],  # We don't need order book updates for order tracking
-                account_ids=[self.lighter.account_idx],  # Subscribe to our account
-                on_order_book_update=on_order_book_update,
-                on_account_update=on_account_update,
-            )
-            
-            # Start WebSocket in background
-            async def run_account_websocket():
+            async def run_account_orders_websocket():
+                """Run dedicated WebSocket for account orders"""
+                websocket_url = "wss://mainnet.zklighter.elliot.ai/stream"  # Use constant URL
                 max_retries = 5
                 retry_count = 0
                 
                 while retry_count < max_retries and not self.shutdown_requested:
                     try:
-                        logger.info("🌐 Starting account WebSocket connection...")
-                        await self.account_ws_client.run_async()
-                        retry_count = 0  # Reset on successful connection
+                        logger.info("🌐 Connecting to account orders WebSocket...")
+                        
+                        async with websockets.connect(websocket_url) as ws:
+                            # Subscribe to account orders for our market
+                            subscribe_msg = {
+                                "type": "subscribe",
+                                "channel": f"account_orders/{self.market_id}/{self.lighter.account_idx}",
+                                "auth": auth_token_str
+                            }
+                            
+                            await ws.send(json.dumps(subscribe_msg))
+                            logger.info(f"📋 Subscribed to account orders for market {self.market_id}")
+                            
+                            # Reset retry count on successful connection
+                            retry_count = 0
+                            
+                            # Listen for messages
+                            async for message in ws:
+                                if self.shutdown_requested:
+                                    break
+                                    
+                                try:
+                                    data = json.loads(message)
+                                    message_type = data.get('type', '')
+                                    
+                                    if message_type == 'update/account_orders':
+                                        await self.handle_account_orders_update(data)
+                                    elif message_type in ['ping', 'pong']:
+                                        # Handle ping/pong
+                                        if message_type == 'ping':
+                                            await ws.send(json.dumps({"type": "pong"}))
+                                    else:
+                                        logger.debug(f"Account orders WebSocket: {message_type}")
+                                        
+                                except json.JSONDecodeError as e:
+                                    logger.debug(f"Failed to parse WebSocket message: {e}")
+                                except Exception as e:
+                                    logger.error(f"Error processing account orders message: {e}")
+                    
                     except Exception as e:
-                        error_msg = str(e).lower()
-                        # Filter out ping/pong related errors
-                        if any(keyword in error_msg for keyword in ['ping', 'pong', 'unhandled message']):
-                            logger.debug(f"Account WebSocket keep-alive handling (non-critical): {e}")
-                            retry_count = max(0, retry_count - 1)  # Don't count ping/pong errors
-                        else:
-                            logger.error(f"Account WebSocket error: {e}")
-                            retry_count += 1
+                        retry_count += 1
+                        logger.error(f"Account orders WebSocket error: {e}")
                         
                         if retry_count < max_retries:
                             wait_time = min(30, 5 * retry_count)
-                            logger.info(f"⏳ Retrying account WebSocket in {wait_time}s")
+                            logger.info(f"⏳ Retrying account orders WebSocket in {wait_time}s")
                             await asyncio.sleep(wait_time)
                         else:
-                            logger.critical("🚨 Account WebSocket failed after max retries")
+                            logger.critical("🚨 Account orders WebSocket failed after max retries")
                             break
             
-            # Start in background
-            asyncio.create_task(run_account_websocket())
-            logger.info("✅ Account WebSocket setup complete")
+            # Start WebSocket in background
+            asyncio.create_task(run_account_orders_websocket())
+            logger.info("✅ Account orders WebSocket setup complete")
             
         except Exception as e:
-            logger.error(f"Failed to setup account WebSocket: {e}")
+            logger.error(f"Failed to setup account orders WebSocket: {e}")
+    
+    async def handle_account_orders_update(self, data):
+        """Handle account orders updates from dedicated WebSocket with Lighter Protocol format"""
+        try:
+            # Mark that we received an account update
+            self._last_account_update_time = time.time()
+            
+            # Extract orders data - Lighter format: {"orders": {"{MARKET_INDEX}": [Order]}}
+            orders_data = data.get('orders', {})
+            market_orders = orders_data.get(str(self.market_id), [])
+            
+            # Only reset counters if we have meaningful WebSocket data
+            # If market_orders is empty but we have tracked orders, keep existing counters
+            if market_orders or len(self.active_orders) == 0:
+                # Reset order counters only when we have data or no tracked orders
+                self.buy_long_orders = 0.0
+                self.sell_long_orders = 0.0
+                self.sell_short_orders = 0.0
+                self.buy_short_orders = 0.0
+            else:
+                # WebSocket empty but we have tracked orders - use internal tracking for counters
+                logger.debug(f"WebSocket empty, using internal tracking for {len(self.active_orders)} orders")
+                # Update counters from internal tracking
+                for order_id, order_info in self.active_orders.items():
+                    side = order_info.get('side', '')
+                    quantity = order_info.get('quantity', 0)
+                    
+                    # Use same classification logic as WebSocket handler
+                    if side == 'buy':
+                        if self.short_position > 0:
+                            self.buy_short_orders += quantity
+                        else:
+                            self.buy_long_orders += quantity
+                    elif side == 'sell':
+                        if self.long_position > 0:
+                            self.sell_long_orders += quantity
+                        else:
+                            self.sell_short_orders += quantity
+            
+            # Count REAL active orders from WebSocket using Lighter Protocol format
+            real_active_orders = []
+            
+            # Lighter Protocol uses array format: [{Order}, {Order}, ...]
+            if isinstance(market_orders, list):
+                for order in market_orders:
+                    # Check Lighter Protocol order status
+                    status = order.get('status', '').lower()
+                    if status in ['active', 'open', 'pending', 'live']:
+                        # Get order ID from Lighter format
+                        order_id = order.get('order_id', order.get('order_index', ''))
+                        if order_id:
+                            real_active_orders.append(str(order_id))
+                            
+                            # Parse Lighter Protocol order fields
+                            side = order.get('side', '').lower()  # 'buy' or 'sell'
+                            
+                            # Use remaining_base_amount instead of quantity
+                            remaining_amount = float(order.get('remaining_base_amount', '0'))
+                            
+                            # Lighter doesn't have explicit position_type, infer from order direction
+                            # For grid trading: buy orders are long entry, sell orders could be short entry or long exit
+                            # We'll classify based on current positions and price levels
+                            
+                            if side == 'buy':
+                                # Buy orders are typically long entries or short exits
+                                if self.short_position > 0:
+                                    # If we have short position, buy could be short exit
+                                    self.buy_short_orders += remaining_amount
+                                else:
+                                    # Otherwise, it's long entry
+                                    self.buy_long_orders += remaining_amount
+                            elif side == 'sell':
+                                # Sell orders are typically short entries or long exits
+                                if self.long_position > 0:
+                                    # If we have long position, sell could be long exit
+                                    self.sell_long_orders += remaining_amount
+                                else:
+                                    # Otherwise, it's short entry
+                                    self.sell_short_orders += remaining_amount
+            
+            # Handle real_active_orders count based on data source
+            if not market_orders and len(self.active_orders) > 0:
+                # If WebSocket is empty but we have tracked orders, use tracked count
+                real_count = len(self.active_orders)
+            else:
+                # Use WebSocket data
+                real_count = len(real_active_orders)
+            
+            tracked_count = len(self.active_orders)
+            
+            # Log order counts when there are orders
+            if real_count > 0 or tracked_count > 0:
+                logger.info(f"📋 Orders: WebSocket={real_count}, Tracked={tracked_count} | Long(buy={self.buy_long_orders:.1f}, sell={self.sell_long_orders:.1f}), Short(sell={self.sell_short_orders:.1f}, buy={self.buy_short_orders:.1f})")
+            
+            # More conservative sync logic - don't immediately trust WebSocket=0
+            if real_count != tracked_count:
+                # Rate limit sync warnings to prevent spam
+                sync_key = f"{real_count}_{tracked_count}"
+                current_time = time.time()
+                
+                if sync_key not in self.sync_warning_throttle or current_time - self.sync_warning_throttle[sync_key] > 30:
+                    logger.warning(f"🔄 Order sync: WebSocket={real_count}, Tracked={tracked_count}")
+                    self.sync_warning_throttle[sync_key] = current_time
+                
+                # Only clear when WebSocket shows consistently fewer orders
+                if real_count < tracked_count:
+                    excess_count = tracked_count - real_count
+                    
+                    # If WebSocket shows 0 orders, be very conservative
+                    if real_count == 0 and tracked_count > 0:
+                        # Wait longer and only clear very old orders (5+ minutes)
+                        very_old_orders = [
+                            (order_id, order_info) for order_id, order_info in self.active_orders.items()
+                            if current_time - order_info['timestamp'] > 300  # 5 minutes old
+                        ]
+                        
+                        if very_old_orders:
+                            await asyncio.sleep(5)  # Even longer delay
+                            logger.info(f"🔄 Clearing {len(very_old_orders)} very old orders (>5min), keeping {tracked_count - len(very_old_orders)} recent")
+                            for order_id, _ in very_old_orders:
+                                self.active_orders.pop(order_id, None)
+                        else:
+                            logger.debug(f"WebSocket=0 but all {tracked_count} orders are recent (<5min), keeping them")
+                    else:
+                        # Only remove truly stale orders (2+ minutes old)
+                        stale_orders = [
+                            (order_id, order_info) for order_id, order_info in self.active_orders.items()
+                            if current_time - order_info['timestamp'] > 120  # 2 minutes old
+                        ]
+                        
+                        stale_orders.sort(key=lambda x: x[1]['timestamp'])
+                        orders_to_remove = stale_orders[:min(excess_count, len(stale_orders))]
+                        
+                        for order_id, _ in orders_to_remove:
+                            self.active_orders.pop(order_id, None)
+                            logger.info(f"🔄 Synced: Removed stale order {order_id} (>2min old)")
+                
+                # If WebSocket shows more orders, log but don't panic
+                elif real_count > tracked_count:
+                    logger.debug(f"📋 WebSocket shows {real_count - tracked_count} additional orders (normal - others' orders)")
+            else:
+                # Orders are in sync - only log at debug level
+                if real_count > 0:
+                    logger.debug(f"📋 Orders in sync: {real_count} orders")
+                    
+        except Exception as e:
+            logger.error(f"Failed to handle account orders update: {e}")
+            logger.debug(f"Account orders data: {data}")
     
     async def handle_account_update(self, account_id, account_data):
         """Handle account updates from official WebSocket client"""
@@ -538,26 +736,36 @@ class SimplifiedGridBot:
                 
                 # Process order updates - sync with WebSocket order data
                 market_orders = orders.get(str(self.market_id), {})
+                
+                # Count REAL active orders from WebSocket
+                real_active_orders = []
                 if market_orders:
-                    # Count REAL active orders from WebSocket
-                    real_active_orders = []
                     for order_id, order_info in market_orders.items():
                         status = order_info.get('status', '').lower()
                         if status in ['active', 'open', 'pending']:
                             real_active_orders.append(order_id)
-                    
-                    real_count = len(real_active_orders)
-                    tracked_count = len(self.active_orders)
-                    
+                
+                real_count = len(real_active_orders)
+                tracked_count = len(self.active_orders)
+                
+                # Only log when there are actual orders or discrepancies
+                if real_count > 0 or tracked_count > 0:
                     logger.info(f"📋 WebSocket: {real_count} real orders, {tracked_count} tracked")
+                
+                # Sync our internal tracking with WebSocket reality
+                if real_count != tracked_count:
+                    logger.warning(f"🔄 Order sync: WebSocket={real_count}, Tracked={tracked_count}")
                     
-                    # Sync our internal tracking with WebSocket reality
-                    if real_count != tracked_count:
-                        logger.warning(f"🔄 Order sync: WebSocket={real_count}, Tracked={tracked_count}")
+                    # If WebSocket shows fewer orders, clear excess tracking
+                    if real_count < tracked_count:
+                        excess_count = tracked_count - real_count
                         
-                        # If WebSocket shows fewer orders, clear excess tracking
-                        if real_count < tracked_count:
-                            excess_count = tracked_count - real_count
+                        # If WebSocket shows 0 orders but we're tracking some, clear all tracked orders
+                        if real_count == 0 and tracked_count > 0:
+                            logger.info(f"🔄 WebSocket shows 0 orders, clearing all {tracked_count} tracked orders")
+                            self.active_orders.clear()
+                        else:
+                            # Remove oldest tracked orders
                             oldest_orders = sorted(
                                 self.active_orders.items(),
                                 key=lambda x: x[1]['timestamp']
@@ -566,35 +774,18 @@ class SimplifiedGridBot:
                             for order_id, _ in oldest_orders:
                                 self.active_orders.pop(order_id, None)
                                 logger.info(f"🔄 Synced: Removed phantom order {order_id}")
-                        
-                        # If WebSocket shows more orders, it means some orders exist that we're not tracking
-                        # This is normal - we only track orders we placed ourselves
-                        elif real_count > tracked_count:
-                            logger.info(f"📋 WebSocket shows {real_count - tracked_count} additional orders (normal)")
+                    
+                    # If WebSocket shows more orders, it means some orders exist that we're not tracking
+                    # This is normal - we only track orders we placed ourselves
+                    elif real_count > tracked_count:
+                        logger.debug(f"📋 WebSocket shows {real_count - tracked_count} additional orders (normal)")
+                else:
+                    # Orders are in sync - only log at debug level
+                    if real_count > 0:
+                        logger.debug(f"📋 Orders in sync: {real_count} orders")
                             
         except Exception as e:
             logger.error(f"Failed to handle account update: {e}")
-    
-    async def get_order_status_via_websocket(self):
-        """Get order status via WebSocket updates only (no deprecated API calls)"""
-        try:
-            if self.dry_run:
-                return
-                
-            # Pure WebSocket-based tracking - no API calls needed
-            # Order status is updated through handle_account_update
-            logger.debug(f"WebSocket tracking: {len(self.active_orders)} active orders")
-            
-        except Exception as e:
-            logger.error(f"Failed to check order status via WebSocket: {e}")
-    
-    async def handle_account_orders_update(self, data):
-        """Legacy method - now handled by official WebSocket client"""
-        pass
-    
-    async def process_order_update(self, order):
-        """Legacy method - now handled by official WebSocket client"""
-        pass
     
     async def cancel_all_orders(self):
         """Cancel all orders (simplified)"""
@@ -603,65 +794,36 @@ class SimplifiedGridBot:
                 logger.info("🔄 DRY RUN - Would cancel all orders")
                 cancelled_count = len(self.active_orders)
                 self.active_orders.clear()
+                logger.info(f"✅ DRY RUN: {cancelled_count} orders cancelled")
                 return cancelled_count
             
             logger.info("🚫 Cancelling all orders...")
+            
+            # Clear internal tracking immediately to prevent displaying stale counts
+            cancelled_count = len(self.active_orders)
+            self.active_orders.clear()
+            
+            # Attempt actual cancellation
             result = await self.lighter.cancel_all_orders()
             
             if result and len(result) >= 2:
                 response, error = result
                 if error is None:
-                    cancelled_count = len(self.active_orders)
-                    self.active_orders.clear()
-                    logger.info(f"✅ {cancelled_count} orders cancelled")
+                    logger.info(f"✅ {cancelled_count} orders cancelled successfully")
                     return cancelled_count
+                else:
+                    logger.warning(f"⚠️ Cancellation error: {error}")
+            else:
+                logger.warning("⚠️ Bulk cancellation may have failed - orders cleared from tracking anyway")
             
-            logger.warning("⚠️ Bulk cancellation may have failed")
-            return 0
+            return cancelled_count
             
         except Exception as e:
             logger.error(f"Cancel all orders failed: {e}")
-            return 0
-    
-    def should_place_long_order(self):
-        """Check if we should place long orders"""
-        current_time = time.time()
-        
-        # Reduced cooldown time for more responsive trading
-        cooldown_time = 5  # Reduced from 10 seconds
-        if current_time - self.last_long_order_time < cooldown_time:
-            return False
-        
-        # Check if we already have long orders
-        long_orders = [o for o in self.active_orders.values() 
-                      if o['position_type'] == 'long']
-        
-        if self.long_position == 0:
-            # Need entry order - check if we don't have any buy orders
-            return len([o for o in long_orders if o['side'] == 'buy']) == 0
-        else:
-            # Need exit order - check if we don't have any sell orders
-            return len([o for o in long_orders if o['side'] == 'sell']) == 0
-    
-    def should_place_short_order(self):
-        """Check if we should place short orders"""
-        current_time = time.time()
-        
-        # Reduced cooldown time for more responsive trading
-        cooldown_time = 5  # Reduced from 10 seconds
-        if current_time - self.last_short_order_time < cooldown_time:
-            return False
-        
-        # Check if we already have short orders
-        short_orders = [o for o in self.active_orders.values() 
-                       if o['position_type'] == 'short']
-        
-        if self.short_position == 0:
-            # Need entry order - check if we don't have any sell orders
-            return len([o for o in short_orders if o['side'] == 'sell']) == 0
-        else:
-            # Need exit order - check if we don't have any buy orders
-            return len([o for o in short_orders if o['side'] == 'buy']) == 0
+            # Still clear tracking to prevent stale display
+            cancelled_count = len(self.active_orders)
+            self.active_orders.clear()
+            return cancelled_count
     
     async def adjust_grid_strategy(self):
         """Main grid strategy logic (OKX-enhanced)"""
@@ -675,29 +837,29 @@ class SimplifiedGridBot:
             # Simulate order fills in dry run mode
             await self.simulate_order_fills_in_dry_run()
             
-            # Only clean up EXTREMELY old orders (likely orphaned) - give orders time to fill
+            # Only clean up EXTREMELY old orders (likely orphaned)
             current_time = time.time()
             expired_orders = [
                 order_id for order_id, order_info in self.active_orders.items()
-                if current_time - order_info['timestamp'] > 1800  # 30 minutes instead of 2 minutes
+                if current_time - order_info['timestamp'] > 1800  # 30 minutes
             ]
             for order_id in expired_orders:
                 logger.info(f"🔄 Cleaning up very old order (likely orphaned): {order_id}")
                 self.active_orders.pop(order_id, None)
             
             # Periodic order status validation
-            if int(current_time) % 30 == 0:  # Every 30 seconds
+            if int(current_time) % 60 == 0:  # Every 60 seconds
                 await self.validate_order_tracking()
             
-            # Check if we need to place orders
+            # Enhanced order management with much stricter limits and conservative approach
             active_count = len(self.active_orders)
-            if active_count >= MAX_ACTIVE_ORDERS:
-                logger.warning(f"Too many active orders ({active_count}), cleaning up first")
-                # Force cleanup if too many orders
-                oldest_orders = sorted(self.active_orders.items(), key=lambda x: x[1]['timestamp'])[:2]
-                for order_id, _ in oldest_orders:
-                    logger.info(f"🔄 Force removing old order: {order_id}")
-                    self.active_orders.pop(order_id, None)
+            if active_count >= self.max_orders:
+                logger.warning(f"Max orders ({self.max_orders}) reached, skipping new orders until cleanup")
+                return
+            
+            # Additional safety: if we have any tracked orders, be more cautious about placing new ones
+            if active_count >= 6:  # Less conservative threshold to allow more trading
+                logger.info(f"{active_count} orders already tracked, reducing new order placement")
                 return
             
             # Long position management - improved logic to prevent duplicate orders
@@ -709,7 +871,8 @@ class SimplifiedGridBot:
                 if len(long_buy_orders) == 0:
                     logger.info("No long position and no buy orders - placing long entry order")
                     entry_price = self.latest_price * (1 - self.grid_spacing)
-                    result = await self.place_order('buy', entry_price, self.long_initial_quantity, 'long')
+                    order_quantity = self.calculate_order_quantity(entry_price)
+                    result = await self.place_order('buy', entry_price, order_quantity, 'long')
                     if result:
                         logger.info(f"✅ Long entry order placed at ${entry_price:.6f}")
                 else:
@@ -723,7 +886,8 @@ class SimplifiedGridBot:
                     if self.long_position > 0:
                         # Place exit order (take profit) using full grid spacing
                         exit_price = self.latest_price * (1 + self.grid_spacing)  # Full grid spacing
-                        result = await self.place_order('sell', exit_price, self.long_initial_quantity, 'long')
+                        order_quantity = self.calculate_order_quantity(exit_price)
+                        result = await self.place_order('sell', exit_price, order_quantity, 'long')
                         if result:
                             logger.info(f"✅ Long exit order placed at ${exit_price:.6f}")
                 else:
@@ -738,7 +902,8 @@ class SimplifiedGridBot:
                 if len(short_sell_orders) == 0:
                     logger.info("No short position and no sell orders - placing short entry order")
                     entry_price = self.latest_price * (1 + self.grid_spacing)
-                    result = await self.place_order('sell', entry_price, self.short_initial_quantity, 'short')
+                    order_quantity = self.calculate_order_quantity(entry_price)
+                    result = await self.place_order('sell', entry_price, order_quantity, 'short')
                     if result:
                         logger.info(f"✅ Short entry order placed at ${entry_price:.6f}")
                 else:
@@ -752,7 +917,8 @@ class SimplifiedGridBot:
                     if self.short_position > 0:
                         # Place exit order (take profit) using full grid spacing
                         exit_price = self.latest_price * (1 - self.grid_spacing)  # Full grid spacing
-                        result = await self.place_order('buy', exit_price, self.short_initial_quantity, 'short')
+                        order_quantity = self.calculate_order_quantity(exit_price)
+                        result = await self.place_order('buy', exit_price, order_quantity, 'short')
                         if result:
                             logger.info(f"✅ Short exit order placed at ${exit_price:.6f}")
                 else:
@@ -826,9 +992,9 @@ class SimplifiedGridBot:
             current_time = time.time()
             
             # If we haven't received account updates recently, our tracking might be stale
-            if hasattr(self, '_last_account_update_time'):
+            if self._last_account_update_time is not None:
                 time_since_update = current_time - self._last_account_update_time
-                if time_since_update > 60:  # No updates for 1 minute
+                if time_since_update > 90:  # No updates for 1.5 minutes
                     logger.warning(f"⚠️ No account WebSocket updates for {time_since_update:.0f}s - tracking may be stale")
                     # Conservative cleanup - only remove very old orders
                     very_old_orders = [
@@ -838,15 +1004,28 @@ class SimplifiedGridBot:
                     for order_id in very_old_orders:
                         logger.info(f"🔄 Removing very old order (no WebSocket updates): {order_id}")
                         self.active_orders.pop(order_id, None)
+            else:
+                # Initialize tracking if not set
+                self._last_account_update_time = current_time
+                logger.debug("Initialized account update tracking")
             
-            # Track internal consistency
+            # Track internal consistency with much more conservative cleanup
             tracked_count = len(self.active_orders)
-            if tracked_count > 4:  # If we have too many tracked orders
-                logger.warning(f"🔍 Too many tracked orders ({tracked_count}), cleaning oldest")
-                oldest_orders = sorted(self.active_orders.items(), key=lambda x: x[1]['timestamp'])[:2]
-                for order_id, _ in oldest_orders:
-                    logger.info(f"🔄 Removing oldest tracked order: {order_id}")
-                    self.active_orders.pop(order_id, None)
+            if tracked_count > 8:  # Only when we have way too many
+                logger.warning(f"🔍 Emergency cleanup: {tracked_count} tracked orders")
+                # Only remove orders older than 10 minutes in emergency
+                very_old_orders = [
+                    (order_id, order_info) for order_id, order_info in self.active_orders.items()
+                    if current_time - order_info['timestamp'] > 600  # 10+ minutes old
+                ]
+                
+                if very_old_orders:
+                    very_old_orders.sort(key=lambda x: x[1]['timestamp'])
+                    for order_id, _ in very_old_orders[:3]:  # Remove max 3 at a time
+                        logger.info(f"🔄 Emergency cleanup: removing very old order {order_id}")
+                        self.active_orders.pop(order_id, None)
+                else:
+                    logger.warning(f"All {tracked_count} orders are recent - possible real orders, keeping them")
                 
         except Exception as e:
             logger.error(f"Failed to validate order tracking: {e}")
@@ -976,6 +1155,8 @@ def parse_arguments():
     parser = argparse.ArgumentParser(description='Simplified Lighter Grid Bot')
     parser.add_argument('--dry-run', action='store_true', help='Run in simulation mode')
     parser.add_argument('--symbol', default=COIN_NAME, help=f'Trading symbol (default: {COIN_NAME})')
+    parser.add_argument('--order-amount', type=float, default=DEFAULT_ORDER_AMOUNT, 
+                       help=f'Order amount in USD (default: ${DEFAULT_ORDER_AMOUNT})')
     return parser.parse_args()
 
 async def main():
@@ -989,7 +1170,7 @@ async def main():
         logger.info(f"Using symbol: {COIN_NAME}")
     
     # Create bot instance
-    bot = SimplifiedGridBot(dry_run=args.dry_run)
+    bot = SimplifiedGridBot(dry_run=args.dry_run, order_amount=args.order_amount)
     
     # Setup signal handlers
     def signal_handler(signum, frame):
@@ -1028,6 +1209,7 @@ if __name__ == "__main__":
     mode_str = "DRY RUN" if args.dry_run else "LIVE TRADING"
     print(f"🤖 Simplified Lighter Grid Bot ({mode_str})")
     print(f"📊 Symbol: {args.symbol}, Leverage: {LEVERAGE}x, Grid: {GRID_SPACING*100}%")
+    print(f"💰 Order Amount: ${args.order_amount} USD per order")
     print("=" * 50)
     
     asyncio.run(main())
