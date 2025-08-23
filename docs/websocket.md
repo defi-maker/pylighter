@@ -9,6 +9,22 @@ wscat -c 'wss://mainnet.zklighter.elliot.ai/stream'
 ```
 
 
+You can send transactions using the websocket as follows:
+
+```
+{
+    "type": "jsonapi/sendtx",
+    "data": {
+        "tx_type": INTEGER,
+        "tx_info": ...
+    }
+}
+
+```
+
+
+The _tx\_type_ options can be found in the [SignerClient](https://github.com/elliottech/lighter-python/blob/main/lighter/signer_client.py) file, while _tx\_info_ can be generated using the sign methods in the SignerClient.
+
 We first need to define some types that appear often in the JSONs.
 
 ```
@@ -114,7 +130,17 @@ Trade = {
     "bid_account_id": INTEGER,
     "is_maker_ask": BOOLEAN,
     "block_height": INTEGER,
-    "timestamp": INTEGER
+    "timestamp": INTEGER,
+    "taker_fee": INTEGER (omitted when zero),
+    "taker_position_size_before": STRING (omitted when empty),
+    "taker_entry_quote_before": STRING (omitted when empty),
+    "taker_initial_margin_fraction_before": INTEGER (omitted when zero),
+    "taker_position_sign_changed": BOOL (omitted when false),
+    "maker_fee": INTEGER (omitted when zero),
+    "maker_position_size_before": STRING (omitted when empty),
+    "maker_entry_quote_before": STRING (omitted when empty),
+    "maker_initial_margin_fraction_before": INTEGER (omitted when zero),
+    "maker_position_sign_changed": BOOL (omitted when false),
 }
 
 ```
@@ -137,7 +163,13 @@ Example:
     "bid_account_id": 654321,
     "is_maker_ask": true,
     "block_height": 1500000,
-    "timestamp": 1700000000
+    "timestamp": 1700000000,
+    "taker_position_size_before":"1.14880",
+    "taker_entry_quote_before":"136130.046511",
+    "taker_initial_margin_fraction_before":500,
+    "maker_position_size_before":"-0.02594",
+    "maker_entry_quote_before":"3075.396750",
+    "maker_initial_margin_fraction_before":400
 }
 
 ```
@@ -152,12 +184,17 @@ Position = {
     "initial_margin_fraction": STRING,
     "open_order_count": INTEGER,
     "pending_order_count": INTEGER,
+    "position_tied_order_count": INTEGER,
     "sign": INTEGER,
     "position": STRING,
     "avg_entry_price": STRING,
     "position_value": STRING,
     "unrealized_pnl": STRING,
-    "realized_pnl": STRING
+    "realized_pnl": STRING,
+    "liquidation_price": STRING,
+    "total_funding_paid_out": STRING (omitted when empty),
+    "margin_mode": INT,
+    "allocated_margin": STRING,
 }
 
 ```
@@ -172,12 +209,17 @@ Example:
     "initial_margin_fraction": "0.1",
     "open_order_count": 2,
     "pending_order_count": 1,
+    "position_tied_order_count": 3,
     "sign": 1,
     "position": "0.5",
     "avg_entry_price": "20000.00",
     "position_value": "10000.00",
     "unrealized_pnl": "500.00",
-    "realized_pnl": "100.00"
+    "realized_pnl": "100.00",
+    "liquidation_price": "3024.66",
+    "total_funding_paid_out": "34.2",
+    "margin_mode": 1,
+    "allocated_margin": "46342",
 }
 
 ```
@@ -324,13 +366,14 @@ or
 
 ```
 {
-    "channel": "market_stats:0",
+    "channel": "market_stats:{MARKET_INDEX}",
     "market_stats": {
         "market_id": INTEGER,
         "index_price": STRING,
         "mark_price": STRING,
+        "open_interest": STRING,
         "last_trade_price": STRING,
-      	"current_funding_rate": STRING,
+          "current_funding_rate": STRING,
         "funding_rate": STRING,
         "funding_timestamp": INTEGER,
         "daily_base_token_volume": FLOAT,
@@ -354,6 +397,7 @@ or
         "market_id": 0,
         "index_price": "3335.04",
         "mark_price": "3335.09",
+        "open_interest": "235.25",
         "last_trade_price": "3335.65",
         "current_funding_rate": "0.0057",
         "funding_rate": "0.0005",
@@ -462,8 +506,16 @@ The account all channel sends specific account market data for all markets.
 {
     "account": INTEGER,
     "channel": "account_all:{ACCOUNT_ID}",
+    "daily_trades_count": INTEGER,
+    "daily_volume": INTEGER,
+    "weekly_trades_count": INTEGER,
+    "weekly_volume": INTEGER,
+    "monthly_trades_count": INTEGER,
+    "monthly_volume": INTEGER,
+    "total_trades_count": INTEGER,
+    "total_volume": INTEGER,
     "funding_histories": {
-    	"{MARKET_INDEX}": [
+        "{MARKET_INDEX}": [
         {
           "timestamp": INTEGER,
           "market_id": INTEGER,
@@ -475,15 +527,6 @@ The account all channel sends specific account market data for all markets.
         }
       ]
     },
-    "liquidations": [
-      {
-      	"liquidation_id": INTEGER,
-        "account_index": INTEGER,
-        "liquidation_type": INTEGER,
-        "portfolio_value": STRING,
-        "margin_requirement": STRING
-      }
-    ],
     "positions": {
         "{MARKET_INDEX}": Position
     },
@@ -503,6 +546,14 @@ The account all channel sends specific account market data for all markets.
 {
     "account": 10,
     "channel": "account_all:10",
+    "daily_trades_count": 123,
+    "daily_volume": 234,
+    "weekly_trades_count": 345,
+    "weekly_volume": 456,
+    "monthly_trades_count": 567,
+    "monthly_volume": 678,
+    "total_trades_count": 891,
+    "total_volume": 912,
     "funding_histories": {
         "1": [
             {
@@ -516,15 +567,6 @@ The account all channel sends specific account market data for all markets.
             }
         ]
     },
-    "liquidations": [
-        {
-            "liquidation_id": 301,
-            "account_index": 1,
-            "liquidation_type": 2,
-            "portfolio_value": "10000.00",
-            "margin_requirement": "8000.00"
-        }
-    ],
     "positions": {
         "1": {
             "market_id": 101,
@@ -532,12 +574,17 @@ The account all channel sends specific account market data for all markets.
             "initial_margin_fraction": "0.1",
             "open_order_count": 2,
             "pending_order_count": 1,
+            "position_tied_order_count": 3,
             "sign": 1,
             "position": "0.5",
             "avg_entry_price": "20000.00",
             "position_value": "10000.00",
             "unrealized_pnl": "500.00",
-            "realized_pnl": "100.00"
+            "realized_pnl": "100.00",
+            "liquidation_price": "3024.66",
+            "total_funding_paid_out": "34.2",
+            "margin_mode": 1,
+            "allocated_margin": "46342",
         }
     },
     "shares": [
@@ -563,7 +610,13 @@ The account all channel sends specific account market data for all markets.
                 "bid_account_id": 654321,
                 "is_maker_ask": true,
                 "block_height": 1500000,
-                "timestamp": 1700000000
+                "timestamp": 1700000000,
+                "taker_position_size_before":"1.14880",
+                "taker_entry_quote_before":"136130.046511",
+                "taker_initial_margin_fraction_before":500,
+                "maker_position_size_before":"-0.02594",
+                "maker_entry_quote_before":"3075.396750",
+                "maker_initial_margin_fraction_before":400
             }
         ]
     },
@@ -612,15 +665,6 @@ The account market channel sends specific account market data for a market.
         "position_size": STRING,
         "position_side": STRING
         },
-    "liquidations": [
-        {
-      	    "liquidation_id": INTEGER,
-            "account_index": INTEGER,
-            "liquidation_type": INTEGER,
-            "portfolio_value": STRING,
-            "margin_requirement": STRING
-        }
-    ],
     "orders": [Order],
     "position": Position,
     "trades": [Trade],
@@ -663,7 +707,24 @@ The account stats channel sends account stats data for the specific account.
         "leverage": STRING,
         "available_balance": STRING,      
         "margin_usage": STRING,
-        "buying_power": STRING
+        "buying_power": STRING,        
+                "cross_stats":{
+           "collateral": STRING,
+           "portfolio_value": STRING,
+           "leverage": STRING,
+           "available_balance": STRING,
+           "margin_usage": STRING,
+           "buying_power": STRING
+        },
+        "total_stats":{
+           "collateral": STRING,
+           "portfolio_value": STRING,
+           "leverage": STRING,
+           "available_balance": STRING,
+           "margin_usage": STRING,
+           "buying_power": STRING
+        }
+
     },
     "type": "update/user_stats"
 }
@@ -682,7 +743,23 @@ The account stats channel sends account stats data for the specific account.
         "leverage": "3.0",
         "available_balance": "2000.00",
         "margin_usage": "0.80",
-        "buying_power": "4000.00"
+        "buying_power": "4000.00",
+        "cross_stats":{
+           "collateral":"0.000000",
+           "portfolio_value":"0.000000",
+           "leverage":"0.00",
+           "available_balance":"0.000000",
+           "margin_usage":"0.00",
+           "buying_power":"0"
+        },
+        "total_stats":{
+           "collateral":"0.000000",
+           "portfolio_value":"0.000000",
+           "leverage":"0.00",
+           "available_balance":"0.000000",
+           "margin_usage":"0.00",
+           "buying_power":"0"
+        }
     },
     "type": "update/user_stats"
 }
@@ -762,6 +839,237 @@ The account all orders channel sends data about all the orders of an account.
 ```
 
 
+Blockchain height updates
+
+```
+{
+    "type": "subscribe",
+    "channel": "height",
+}
+
+```
+
+
+**Response Structure**
+
+```
+{
+    "channel": "height",
+    "height": INTEGER,
+    "type": "update/height"
+}
+
+```
+
+
+Provides data about pool activities: trades, orders, positions, shares and funding histories.
+
+```
+{
+    "type": "subscribe",
+    "channel": "pool_data/{ACCOUNT_ID}",
+    "auth": "{AUTH_TOKEN}"
+}
+
+```
+
+
+**Response Structure**
+
+```
+{
+    "channel": "pool_data:{ACCOUNT_ID}",
+    "account": INTEGER,
+    "trades": {
+        "{MARKET_INDEX}": [Trade]
+    },
+    "orders": {
+        "{MARKET_INDEX}": [Order]
+    },
+    "positions": {
+        "{MARKET_INDEX}": Position
+    },
+    "shares": [PoolShares],
+    "funding_histories": {
+        "{MARKET_INDEX}": [PositionFunding]
+    },
+    "type": "subscribed/pool_data"
+}
+
+```
+
+
+Provides information about pools.
+
+```
+{
+    "type": "subscribe",
+    "channel": "pool_info/{ACCOUNT_ID}",
+    "auth": "{AUTH_TOKEN}"
+}
+
+```
+
+
+**Response Structure**
+
+```
+{
+    "channel": "pool_info:{ACCOUNT_ID}",
+    "pool_info": {
+        "status": INTEGER,
+        "operator_fee": STRING,
+        "min_operator_share_rate": STRING,
+        "total_shares": INTEGER,
+        "operator_shares": INTEGER,
+        "annual_percentage_yield": FLOAT,
+        "daily_returns": [
+            {
+                "timestamp": INTEGER,
+                "daily_return": FLOAT
+            }
+        ],
+        "share_prices": [
+            {
+                "timestamp": INTEGER,
+                "share_price": FLOAT
+            }
+        ]
+    },
+    "type": "subscribed/pool_info"
+}
+
+```
+
+
+Provides notifications received by an account. Notifications can be of three kinds: liquidation, deleverage, or announcement. Each kind has a different content structure.
+
+```
+{
+    "type": "subscribe",
+    "channel": "notification/{ACCOUNT_ID}",
+    "auth": "{AUTH_TOKEN}"
+}
+
+```
+
+
+**Response Structure**
+
+```
+{
+    "channel": "notification:{ACCOUNT_ID}",
+    "notifs": [
+        {
+            "id": STRING,
+            "created_at": STRING,
+            "updated_at": STRING,
+            "kind": STRING,
+            "account_index": INTEGER,
+            "content": NotificationContent,
+            "ack": BOOLEAN,
+            "acked_at": STRING
+        }
+    ],
+    "type": "subscribed/notification"
+}
+
+```
+
+
+**Liquidation Notification Content**
+
+```
+{
+    "id": STRING,
+    "is_ask": BOOL,
+    "usdc_amount": STRING,
+    "size": STRING,
+    "market_index": INTEGER,
+    "price": STRING,
+    "timestamp": INTEGER,
+    "avg_price": STRING
+}
+
+```
+
+
+**Deleverage Notification Content**
+
+```
+{
+    "id": STRING,
+    "usdc_amount": STRING,
+    "size": STRING,
+    "market_index": INTEGER,
+    "settlement_price": STRING,
+    "timestamp": INTEGER
+}
+
+```
+
+
+**Announcement Notification Content**
+
+```
+{
+    "title": STRING,
+    "content": STRING, 
+    "created_at": INTEGER
+}
+
+```
+
+
+**Example response**
+
+```
+{
+    "channel": "notification:12345",
+    "notifs": [
+        {
+            "id": "notif_123",
+            "created_at": "2024-01-15T10:30:00Z",
+            "updated_at": "2024-01-15T10:30:00Z",
+            "kind": "liquidation",
+            "account_index": 12345,
+            "content": {
+                "id": "notif_123",
+                "is_ask": false,
+                "usdc_amount": "1500.50",
+                "size": "0.500000",
+                "market_index": 1,
+                "price": "3000.00",
+                "timestamp": 1705312200,
+                "avg_price": "3000.00"
+            },
+            "ack": false,
+            "acked_at": null
+        },
+        {
+            "id": "notif_124",
+            "created_at": "2024-01-15T11:00:00Z",
+            "updated_at": "2024-01-15T11:00:00Z",
+            "kind": "deleverage",
+            "account_index": 12345,
+            "content": {
+                "id": "notif_124",
+                "usdc_amount": "500.25",
+                "size": "0.200000",
+                "market_index": 1,
+                "settlement_price": "2501.25",
+                "timestamp": 1705314000
+            },
+            "ack": false,
+            "acked_at": null
+        }
+    ],
+    "type": "update/notification"
+}
+
+```
+
+
 The account all orders channel sends data about the orders of an account on a certain market.
 
 ```
@@ -810,6 +1118,10 @@ The account all trades channel sends data about all the trades of an account.
     "trades": {
         "{MARKET_INDEX}": [Trade]
     },
+    "total_volume": FLOAT,
+    "monthly_volume": FLOAT,
+    "weekly_volume": FLOAT,
+    "daily_volume": FLOAT,
     "type": "update/account_all_trades"
 }
 
@@ -841,3 +1153,36 @@ The account all orders channel sends data about all the order of an account.
 }
 
 ```
+
+
+Updated 5 days ago
+
+* * *
+
+*   [Table of Contents](#)
+*   *   [Connection](#connection)
+    *   [Send Tx](#send-tx)
+    *   [Types](#types)
+        *   [Transaction JSON](#transaction-json)
+        *   [Order JSON](#order-json)
+        *   [Trade JSON](#trade-json)
+        *   [Position JSON](#position-json)
+        *   [PoolShares JSON](#poolshares-json)
+    *   [Channels](#channels)
+        *   [Order Book](#order-book)
+        *   [Market Stats](#market-stats)
+        *   [Trade](#trade)
+        *   [Account All](#account-all)
+        *   [Account Market](#account-market)
+        *   [Account Stats](#account-stats)
+        *   [Transaction](#transaction)
+        *   [Executed Transaction](#executed-transaction)
+        *   [Account Tx](#account-tx)
+        *   [Account All Orders](#account-all-orders)
+        *   [Height](#height)
+        *   [Pool data](#pool-data)
+        *   [Pool info](#pool-info)
+        *   [Notification](#notification)
+        *   [Account Orders](#account-orders)
+        *   [Account All Trades](#account-all-trades)
+        *   [Account All Positions](#account-all-positions)

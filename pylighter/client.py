@@ -526,14 +526,37 @@ class Lighter():
             **endpoint,
         )
     
-    # DEPRECATED - Use account_orders instead
-    async def account_active_orders(self,ticker,account_idx=None,is_index=False,**kwargs):
+    async def account_active_orders(self, ticker, account_idx=None, is_index=False, **kwargs):
         """
-        DEPRECATED: This endpoint returns 403 errors. Use account_orders instead.
+        Get account active orders using the lighter-sdk OrderApi.account_active_orders method.
+        
+        Args:
+            ticker: Market symbol (e.g., 'BTC-USD') or market ID if is_index=True  
+            account_idx: Account index (optional, uses default if not provided)
+            is_index: Whether ticker is a market ID (default: False)
+            **kwargs: Additional parameters
+        
+        Returns:
+            Orders response from the account_active_orders API endpoint
         """
-        logger.warning("account_active_orders is deprecated and returns 403 errors. Use account_orders instead.")
-        # Fallback to account_orders
-        return await self.account_orders(ticker, account_idx, is_index=is_index, **kwargs)
+        market_id = self.ticker_to_idx[ticker] if not is_index else ticker
+        account_idx = account_idx or self.account_idx
+        
+        # Generate auth token
+        auth, err = self.client.create_auth_token_with_expiry(SignerClient.DEFAULT_10_MIN_AUTH_EXPIRY)
+        if err:
+            raise ValueError(f"Failed to create auth token: {err}")
+        
+        # Use the OrderApi from lighter-sdk directly
+        order_api = self.client.api_client.get_api('OrderApi')
+        
+        # Call account_active_orders with proper parameters
+        return await order_api.account_active_orders(
+            account_index=account_idx,
+            market_id=market_id,
+            auth=auth,
+            **kwargs
+        )
 
     async def account_inactive_orders(self, ticker=None, account_idx=None, ask_filter=-1, between_timestamps=None, cursor=None, limit=100, is_index=False):
         account_idx = account_idx or self.account_idx
