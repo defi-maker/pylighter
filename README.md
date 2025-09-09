@@ -13,7 +13,7 @@ uv sync
 创建 `.env` 文件：
 ```bash
 LIGHTER_KEY=0x... # 你的钱包地址  
-LIGHTER_SECRET=... # 你的私钥
+LIGHTER_SECRET=... # 你的 API KEY
 ```
 
 ### 网格策略快速启动
