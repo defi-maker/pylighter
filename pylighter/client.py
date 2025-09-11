@@ -1,6 +1,7 @@
 import time
 import asyncio 
 import logging
+import os
 
 from datetime import datetime
 from lighter import SignerClient
@@ -10,7 +11,6 @@ logging.basicConfig(level=logging.INFO)
 
 BASE_URL = "https://mainnet.zklighter.elliot.ai"
 CHAIN_ID_MAINNET = 304
-API_KEY_INDEX = 1
 
 endpoints = {
     #https://apidocs.lighter.xyz/reference/status (root)
@@ -185,9 +185,10 @@ endpoints = {
 
 class Lighter():
     
-    def __init__(self,key=None,secret=None):
+    def __init__(self,key=None,secret=None,api_key_index=None):
         self.key = key
         self.secret = secret
+        self.api_key_index = api_key_index if api_key_index is not None else int(os.getenv("API_KEY_INDEX", 1))
         self.http_client = HTTPClient(base_url=BASE_URL)
 
         self.aws_manager = None
@@ -219,7 +220,7 @@ class Lighter():
             url=BASE_URL,
             private_key=self.secret,
             account_index=self.account_idx,
-            api_key_index=API_KEY_INDEX
+            api_key_index=self.api_key_index
         )
 
         ticker_meta = await self.orderbooks()

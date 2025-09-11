@@ -75,7 +75,7 @@ The `Lighter` client provides:
 
 ### Configuration
 
-- Uses `.env` file for API credentials (`LIGHTER_KEY`, `LIGHTER_SECRET`)
+- Uses `.env` file for API credentials (`LIGHTER_KEY`, `LIGHTER_SECRET`, `API_KEY_INDEX`)
 - Supports both testnet (`https://testnet.zklighter.elliot.ai`) and mainnet (`https://mainnet.zklighter.elliot.ai`)
 - Market precision and minimum amounts are automatically fetched during client initialization
 
@@ -115,7 +115,7 @@ The project includes comprehensive testing tools:
 
 ### Real Environment Testing
 - **`test_real_environment.py`**: Tests all client functionality against real Lighter Protocol API
-- Requires `LIGHTER_KEY` and `LIGHTER_SECRET` environment variables
+- Requires `LIGHTER_KEY`, `LIGHTER_SECRET`, and optionally `API_KEY_INDEX` environment variables
 - Performs only READ operations - no trading or orders are placed
 - Tests all major API endpoints comprehensively
 

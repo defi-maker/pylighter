@@ -14,6 +14,7 @@ uv sync
 ```bash
 LIGHTER_KEY=0x... # 你的钱包地址  
 LIGHTER_SECRET=... # 你的 API KEY
+API_KEY_INDEX=1   # API KEY 索引，需要和 API KEY 匹配（可选，默认为1）
 ```
 
 ### 网格策略快速启动
@@ -117,6 +118,7 @@ uv sync
 # 配置环境变量
 echo "LIGHTER_KEY=0x..." > .env
 echo "LIGHTER_SECRET=..." >> .env
+echo "API_KEY_INDEX=1" >> .env
 ```
 
 2. **策略测试**
