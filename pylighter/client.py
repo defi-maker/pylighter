@@ -1,5 +1,5 @@
 import time
-import asyncio 
+import asyncio
 import logging
 import os
 
@@ -94,9 +94,9 @@ endpoints = {
         'method': "GET",
     },
 
-    
+
     #https://apidocs.lighter.xyz/reference/accounttxs (transaction)
-    
+
     #https://mainnet.zklighter.elliot.ai/api/v1/accountTxs
     'accounttxs':{
         "endpoint": "/api/v1/accountTxs",
@@ -145,7 +145,7 @@ endpoints = {
         "endpoint": "/api/v1/announcement",
         "method": "GET",
     },
-    
+
     #missing endpoint from OpenAPI
     'layer2_basic_info': {
         "endpoint": "/api/v1/layer2BasicInfo",
@@ -184,7 +184,7 @@ endpoints = {
 }
 
 class Lighter():
-    
+
     def __init__(self,key=None,secret=None,api_key_index=None):
         self.key = key
         self.secret = secret
@@ -194,13 +194,13 @@ class Lighter():
         self.aws_manager = None
         self.state_manager = None
 
-        self.positions = None 
-        self.orders = None 
+        self.positions = None
+        self.orders = None
         self.l2_dict = {}
         self.l2_update = {}
 
         self.shutdown = False
-        
+
         # Initialize attributes that are set during init_client
         self.account_idx = None
         self.client = None
@@ -210,7 +210,7 @@ class Lighter():
         self.ticker_to_lot_precision = {}
         self.ticker_min_base = {}
         self.ticker_min_quote = {}
-        
+
         return
 
     async def init_client(self):
@@ -225,7 +225,7 @@ class Lighter():
 
         ticker_meta = await self.orderbooks()
         orderbooks = ticker_meta['order_books']
-        
+
         ticker_to_idx = {}
         ticker_to_price_precision = {}
         ticker_to_lot_precision = {}
@@ -261,9 +261,9 @@ class Lighter():
         is_index=False,
         reduce_only=False,
         **kwargs
-    ): 
+    ):
         """Create a limit order.
-        
+
         Args:
             ticker: Market symbol (e.g., 'BTC-USD') or market ID if is_index=True
             amount: Order size (positive for buy, negative for sell)
@@ -272,28 +272,28 @@ class Lighter():
             client_order_index: Client order index (optional)
             is_index: Whether ticker is a market ID (default: False)
             reduce_only: Whether this is a reduce-only order (default: False)
-        
+
         Returns:
             Order creation response from the API
         """
         if client_order_index is None:
             client_order_index = SignerClient.ORDER_TYPE_LIMIT
-        
+
         # Validate TIF
         tif_map = {'GTC': 1, 'IOC': 0, 'ALO': 2}
         if tif not in tif_map:
             raise ValueError(f"Invalid TIF: {tif}. Must be one of {list(tif_map.keys())}")
         tif = tif_map[tif]
-        
+
         # Validate amount and price
         if amount == 0:
             raise ValueError("Amount cannot be zero")
         if price <= 0:
             raise ValueError("Price must be positive")
-        
+
         market_id = self.ticker_to_idx[ticker] if not is_index else ticker
         is_ask = amount < 0  # Negative amount = sell/ask
-        
+
         # Validate minimum amounts
         ticker_key = ticker if not is_index else self.idx_to_ticker.get(ticker, ticker)
         if ticker_key in self.ticker_min_base and abs(amount) < self.ticker_min_base[ticker_key]:
@@ -302,13 +302,13 @@ class Lighter():
             quote = self.ticker_min_quote[ticker_key]
             if abs(amount) * price < quote:
                 raise ValueError(f"Minimum quote amount for {ticker_key} is {quote}")
-        
+
         # Apply precision
         price_precision = self.ticker_to_price_precision.get(ticker_key, 0)
         lot_precision = self.ticker_to_lot_precision.get(ticker_key, 0)
         price = round(price * 10**price_precision)
         base_amount = round(abs(amount) * 10**lot_precision)
-        
+
         return await self.client.create_order(
             market_index=market_id,
             client_order_index=client_order_index,
@@ -332,7 +332,7 @@ class Lighter():
         **kwargs
     ):
         """Create a market order by using a limit order with market price + slippage.
-        
+
         Args:
             ticker: Market symbol (e.g., 'BTC-USD') or market ID if is_index=True
             amount: Order size (positive for buy, negative for sell)
@@ -340,7 +340,7 @@ class Lighter():
             reduce_only: Whether this is a reduce-only order (default: False)
             slippage_tolerance: Slippage tolerance as decimal (default: 0.03 = 3%)
             is_index: Whether ticker is a market ID (default: False)
-        
+
         Returns:
             Order creation response from the API
         """
@@ -348,24 +348,24 @@ class Lighter():
             raise ValueError("Amount cannot be zero")
         if not 0 <= slippage_tolerance <= 1:
             raise ValueError("Slippage tolerance must be between 0 and 1")
-        
+
         market_id = self.ticker_to_idx[ticker] if not is_index else ticker
         lob = await self.orderbook_orders(market_id, is_index=True)
-        
+
         if not lob.get('bids') or not lob.get('asks'):
             raise ValueError(f"No orderbook data available for {ticker}")
-        
+
         bids = lob['bids']
         asks = lob['asks']
         bb = float(bids[0]['price'])
         aa = float(asks[0]['price'])
-        
+
         # For market orders, use the opposite side of the book with slippage
         if amount > 0:  # Buy order - use ask price with positive slippage
             price = aa * (1 + slippage_tolerance)
         else:  # Sell order - use bid price with negative slippage
             price = bb * (1 - slippage_tolerance)
-        
+
         return await self.limit_order(
             ticker=ticker,
             amount=amount,
@@ -382,36 +382,36 @@ class Lighter():
             market_index=market_id,
             order_index=int(order_id)
         )
-    
+
     async def cancel_all_orders(self):
         """Cancel all orders for the account.
-        
+
         Note: This cancels ALL orders across all markets, not just a specific ticker.
         The official Lighter SDK does not support per-ticker bulk cancellation.
-        
+
         Returns:
             Response from the cancel_all_orders endpoint
         """
         # Use immediate cancellation parameters
         time_in_force = 0  # ImmediateCancelAll
         cancel_time = 0  # NilOrderExpiry - MUST be 0 for immediate cancellation
-        
+
         return await self.client.cancel_all_orders(
             time_in_force=time_in_force,
             time=cancel_time
         )
-    
+
     async def send_tx_batch(self, transactions):
         """Send a batch of transactions to the Lighter protocol.
-        
+
         Args:
             transactions: List of transaction objects to send in batch
-        
+
         Returns:
             Response from the send_tx_batch endpoint
         """
         return await self.client.send_tx_batch(transactions)
-        
+
     async def status(self):
         endpoint = dict(endpoints['status'])
         return await self.http_client.request(
@@ -460,7 +460,7 @@ class Lighter():
         }
         return await self.http_client.request(
             **endpoint,
-        )   
+        )
 
     async def apikeys(self,account_idx=None,api_key_index=255):
         account_idx = account_idx or self.account_idx
@@ -472,7 +472,7 @@ class Lighter():
         return await self.http_client.request(
             **endpoint,
         )
-        
+
     async def fee_bucket(self,account_idx=None):
         account_idx = account_idx or self.account_idx
         endpoint = dict(endpoints['fee_bucket'])
@@ -482,7 +482,7 @@ class Lighter():
         return await self.http_client.request(
             **endpoint,
         )
-    
+
     async def pnl(self, by="index", account_idx=None, start=None, end=None, resolution='1h', count_back=2, ignore_transfers=False, **kwargs):
         value = account_idx or self.account_idx
         start = start or int(datetime.now().timestamp() - 60 * 60 * 24)
@@ -526,38 +526,47 @@ class Lighter():
         return await self.http_client.request(
             **endpoint,
         )
-    
+
     async def account_active_orders(self, ticker, account_idx=None, is_index=False, **kwargs):
         """
         Get account active orders using the lighter-sdk OrderApi.account_active_orders method.
-        
+
         Args:
-            ticker: Market symbol (e.g., 'BTC-USD') or market ID if is_index=True  
+            ticker: Market symbol (e.g., 'BTC-USD') or market ID if is_index=True
             account_idx: Account index (optional, uses default if not provided)
             is_index: Whether ticker is a market ID (default: False)
             **kwargs: Additional parameters
-        
+
         Returns:
             Orders response from the account_active_orders API endpoint
         """
         market_id = self.ticker_to_idx[ticker] if not is_index else ticker
         account_idx = account_idx or self.account_idx
-        
+
         # Generate auth token
         auth, err = self.client.create_auth_token_with_expiry(SignerClient.DEFAULT_10_MIN_AUTH_EXPIRY)
         if err:
             raise ValueError(f"Failed to create auth token: {err}")
-        
+
         # Use the OrderApi from lighter-sdk directly
-        order_api = self.client.api_client.get_api('OrderApi')
-        
+        from lighter.api.order_api import OrderApi
+        order_api = OrderApi(self.client.api_client)
+
         # Call account_active_orders with proper parameters
-        return await order_api.account_active_orders(
+        response = await order_api.account_active_orders(
             account_index=account_idx,
             market_id=market_id,
             auth=auth,
             **kwargs
         )
+
+        # Convert response to dict format for consistency
+        if hasattr(response, 'to_dict'):
+            return response.to_dict()
+        elif hasattr(response, '__dict__'):
+            return response.__dict__
+        else:
+            return response
 
     async def account_inactive_orders(self, ticker=None, account_idx=None, ask_filter=-1, between_timestamps=None, cursor=None, limit=100, is_index=False):
         account_idx = account_idx or self.account_idx
@@ -586,7 +595,7 @@ class Lighter():
         )
 
     async def account_orders(self,ticker,account_idx=None,cursor=None,is_index=False,limit=100):
-        market_id = self.ticker_to_idx[ticker] if not is_index else ticker 
+        market_id = self.ticker_to_idx[ticker] if not is_index else ticker
         account_idx = account_idx or self.account_idx
         auth, err = self.client.create_auth_token_with_expiry(SignerClient.DEFAULT_10_MIN_AUTH_EXPIRY)
         if err:
@@ -651,7 +660,7 @@ class Lighter():
         return await self.http_client.request(
             **endpoint,
         )
-    
+
     async def trades(self, ticker=None, account_idx=None, order_index=None, limit=100, sort_by='timestamp', sort_dir='asc', cursor=None, from_id=None, ask_filter=-1, is_index=False, **kwargs):
         endpoint = dict(endpoints['trades'])
         endpoint['params'] = {
@@ -731,8 +740,8 @@ class Lighter():
             endpoint['params']['filter'] = filter
         return await self.http_client.request(
             **endpoint,
-        ) 
-    
+        )
+
     async def next_nonce(self,account_idx=None,api_key_index=0):
         account_idx = account_idx or self.account_idx
         endpoint = dict(endpoints['next_nonce'])
@@ -754,8 +763,8 @@ class Lighter():
         }
         return await self.http_client.request(
             **endpoint,
-        ) 
-    
+        )
+
     async def tx_from_l1_txhash(self, hash):
         endpoint = dict(endpoints['tx_from_l1_txhash'])
         endpoint['params'] = {
@@ -763,8 +772,8 @@ class Lighter():
         }
         return await self.http_client.request(
             **endpoint,
-        ) 
-    
+        )
+
     async def txs(self, index=None, limit=100):
         endpoint = dict(endpoints['txs'])
         endpoint['params'] = {
@@ -775,7 +784,7 @@ class Lighter():
         return await self.http_client.request(
             **endpoint,
         )
-    
+
     async def withdraw_history(self, account_idx=None, cursor=None, filter='all'):
         account_idx = account_idx or self.account_idx
         auth, err = self.client.create_auth_token_with_expiry(SignerClient.DEFAULT_10_MIN_AUTH_EXPIRY)
@@ -823,7 +832,7 @@ class Lighter():
             **endpoint,
         )
 
-    async def current_height(self):  
+    async def current_height(self):
         endpoint = dict(endpoints['current_height'])
         return await self.http_client.request(
             **endpoint,
@@ -869,61 +878,61 @@ class Lighter():
         return await self.http_client.request(
             **endpoint,
         )
-    
+
     # Keep backward compatibility
     async def layer2BasicInfo(self):
         return await self.layer2_basic_info()
-    
+
     async def update_leverage(self, ticker, leverage, is_index=False):
         """
         Update leverage for a specific market
-        
+
         Args:
             ticker: Symbol like 'TON', 'XRP', 'TRX' (or market_id if is_index=True)
             leverage: Leverage multiplier (e.g., 1 for 1x, 2 for 2x, etc.)
             is_index: If True, ticker is treated as market_id
-            
+
         Returns:
             Tuple of (tx_info, tx_hash, error)
         """
         market_id = ticker if is_index else self.ticker_to_idx[ticker]
-        
+
         # Convert leverage to initial margin fraction
         # Formula: margin_fraction = 10000 / leverage
         # 1x leverage = 10000 basis points (100% margin)
         # 2x leverage = 5000 basis points (50% margin)
         # 5x leverage = 2000 basis points (20% margin)
         margin_fraction = int(10000 / leverage)
-        
+
         # Sign the update leverage transaction with margin fraction
         tx_info, error = self.client.sign_update_leverage(
             market_index=market_id,
             leverage=margin_fraction  # This parameter is actually margin fraction, not direct leverage
         )
-        
+
         if error is not None:
             return None, None, error
-            
+
         # Send the transaction with correct TX_TYPE
         try:
             # From lighter-go constants: TxTypeL2UpdateLeverage = 20
             tx_type = 20
             api_response = await self.client.send_tx(tx_type=tx_type, tx_info=tx_info)
             return tx_info, api_response, None
-            
+
         except Exception as e:
             return None, None, str(e)
-    
+
     # ==================== 通用市场约束和交易工具方法 ====================
-    
+
     async def get_market_constraints(self, ticker, is_index=False):
         """
         获取特定交易对的市场约束信息
-        
+
         Args:
             ticker: 交易对符号 (如 'TON', 'BTC-USD') 或市场ID (如果 is_index=True)
             is_index: 如果为 True，ticker 被视为市场ID
-            
+
         Returns:
             dict: 包含市场约束的字典:
             {
@@ -938,9 +947,9 @@ class Lighter():
             market_id = ticker if is_index else self.ticker_to_idx.get(ticker)
             if market_id is None:
                 raise ValueError(f"Market not found for ticker: {ticker}")
-                
+
             ticker_key = ticker if not is_index else self.idx_to_ticker.get(ticker, str(ticker))
-            
+
             # 从预加载的数据中获取约束
             constraints = {
                 'min_base_amount': self.ticker_min_base.get(ticker_key, 1.0),
@@ -949,7 +958,7 @@ class Lighter():
                 'amount_precision': self.ticker_to_lot_precision.get(ticker_key, 1),
                 'market_id': market_id
             }
-            
+
             # 如果预加载数据不完整，从API获取详细信息
             if constraints['min_quote_amount'] == 10.0:  # 默认值，可能需要更新
                 try:
@@ -965,90 +974,90 @@ class Lighter():
                 except Exception:
                     # 如果API调用失败，使用预加载的数据
                     pass
-                    
+
             return constraints
-            
+
         except Exception as e:
             raise ValueError(f"Failed to get market constraints for {ticker}: {e}")
-    
+
     def format_price(self, price, ticker, is_index=False):
         """
         根据市场精度格式化价格
-        
+
         Args:
             price: 原始价格
             ticker: 交易对符号或市场ID
             is_index: 如果为 True，ticker 被视为市场ID
-            
+
         Returns:
             float: 格式化后的价格
         """
         ticker_key = ticker if not is_index else self.idx_to_ticker.get(ticker, str(ticker))
         precision = self.ticker_to_price_precision.get(ticker_key, 6)
         return round(float(price), precision)
-    
+
     def format_quantity(self, quantity, ticker, is_index=False):
         """
         根据市场精度格式化数量
-        
+
         Args:
             quantity: 原始数量
             ticker: 交易对符号或市场ID
             is_index: 如果为 True，ticker 被视为市场ID
-            
+
         Returns:
             float: 格式化后的数量
         """
         ticker_key = ticker if not is_index else self.idx_to_ticker.get(ticker, str(ticker))
         precision = self.ticker_to_lot_precision.get(ticker_key, 1)
-        
+
         if precision > 0:
             precision_factor = 10 ** precision
             return int(float(quantity) * precision_factor + 0.999) / precision_factor
         else:
             return round(float(quantity))
-    
+
     def calculate_min_quantity_for_quote_amount(self, price, min_quote_amount, ticker, is_index=False):
         """
         计算满足最小报价金额要求的数量
-        
+
         Args:
             price: 当前价格
             min_quote_amount: 最小报价金额
             ticker: 交易对符号或市场ID
             is_index: 如果为 True，ticker 被视为市场ID
-            
+
         Returns:
             float: 满足最小报价金额的数量
         """
         if price <= 0:
             raise ValueError("Price must be positive")
-            
+
         base_quantity = min_quote_amount / price
         return self.format_quantity(base_quantity, ticker, is_index)
-    
+
     def validate_order_amount(self, price, quantity, ticker, is_index=False):
         """
         验证订单金额是否满足最小要求
-        
+
         Args:
             price: 订单价格
             quantity: 订单数量
             ticker: 交易对符号或市场ID
             is_index: 如果为 True，ticker 被视为市场ID
-            
+
         Returns:
             tuple: (is_valid: bool, adjusted_quantity: float, error_message: str)
         """
         try:
             ticker_key = ticker if not is_index else self.idx_to_ticker.get(ticker, str(ticker))
-            
+
             # 检查最小基础数量
             min_base = self.ticker_min_base.get(ticker_key, 0)
             if abs(quantity) < min_base:
                 adjusted_quantity = min_base if quantity > 0 else -min_base
                 return False, adjusted_quantity, f"Quantity {abs(quantity)} below minimum {min_base}"
-            
+
             # 检查最小报价金额
             min_quote = self.ticker_min_quote.get(ticker_key, 0)
             quote_amount = abs(quantity) * price
@@ -1057,11 +1066,11 @@ class Lighter():
                 if quantity < 0:
                     adjusted_quantity = -adjusted_quantity
                 return False, adjusted_quantity, f"Quote amount ${quote_amount:.2f} below minimum ${min_quote}"
-            
+
             # 格式化数量以符合精度要求
             formatted_quantity = self.format_quantity(quantity, ticker, is_index)
-            
+
             return True, formatted_quantity, ""
-            
+
         except Exception as e:
             return False, quantity, f"Validation error: {e}"

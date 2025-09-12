@@ -25,9 +25,24 @@ uv run grid_strategy.py --dry-run --symbol SUI
 # 实盘交易
 uv run grid_strategy.py --symbol SUI
 
+# 自定义参数
+uv run grid_strategy.py --symbol TON --dry-run --max-orders 10 --order-amount 20.0
+
 # 其他支持币种
 uv run grid_strategy.py --symbol TON --dry-run
 uv run grid_strategy.py --symbol BTC --dry-run
+```
+
+### 命令行参数
+```bash
+# 查看所有参数
+uv run grid_strategy.py --help
+
+# 主要参数说明
+--dry-run              # 模拟模式，无真实交易
+--symbol SYMBOL        # 交易符号 (默认: TON)
+--order-amount AMOUNT  # 每个订单金额USD (默认: $10.0)
+--max-orders N         # 每个市场最大订单数 (默认: 50)
 ```
 
 ## 项目结构
@@ -58,9 +73,10 @@ pylighter/
 - ✅ **稳定重连**: 自动重连机制，确保 24/7 稳定运行
 
 #### 支持币种
-- **SUI**: 当前主推币种 (已优化)
-- **TON**: 原始适配币种
+- **TON**: 默认适配币种 (杠杆5x, 网格0.03%)
+- **SUI**: 高频策略优化
 - **BTC**: 高价值币种支持
+- **ETH**: 大资金池策略
 
 #### 安全特性
 ```bash
@@ -70,9 +86,11 @@ pylighter/
 ✅ 完整状态清理
 
 # 订单管理
-✅ 最大8个活跃订单限制
-✅ 自动过期订单清理 (5分钟)
-✅ WebSocket 订单状态同步
+✅ 可配置订单数限制 (默认50个/市场)
+✅ 智能订单同步 (每5分钟)
+✅ WebSocket 实时订单状态
+✅ 自动过期订单清理 (30分钟)
+✅ API调用频率控制 (防止接口限制)
 ```
 
 ### 📚 基础 SDK 功能
@@ -124,7 +142,13 @@ echo "API_KEY_INDEX=1" >> .env
 2. **策略测试**
 ```bash
 # 模拟模式测试 (无风险)
-uv run grid_strategy.py --dry-run --symbol SUI
+uv run grid_strategy.py --dry-run --symbol TON
+
+# 自定义订单限制和金额
+uv run grid_strategy.py --dry-run --symbol TON --max-orders 20 --order-amount 15.0
+
+# 超保守模式 (少量订单)
+uv run grid_strategy.py --dry-run --symbol BTC --max-orders 5 --order-amount 50.0
 
 # 检查日志
 tail -f log/grid_strategy.log
@@ -133,7 +157,13 @@ tail -f log/grid_strategy.log
 3. **实盘部署**
 ```bash
 # 启动实盘交易 (需要输入 YES 确认)
-uv run grid_strategy.py --symbol SUI
+uv run grid_strategy.py --symbol TON
+
+# 自定义风险参数
+uv run grid_strategy.py --symbol TON --max-orders 30 --order-amount 20.0
+
+# 高频小单策略
+uv run grid_strategy.py --symbol SUI --max-orders 100 --order-amount 5.0
 
 # 优雅停止 (Ctrl+C)
 # 自动取消订单并保留持仓
@@ -172,6 +202,28 @@ grep -E "(ERROR|WARNING)" log/grid_strategy.log | tail -5
 ## 🔧 故障排除
 
 ### 常见问题
+
+**Q: 如何调整订单数量控制风险？**
+```bash
+# 保守策略 - 少量订单
+uv run grid_strategy.py --symbol TON --max-orders 10
+
+# 积极策略 - 更多订单（需要充足资金）
+uv run grid_strategy.py --symbol TON --max-orders 50
+
+# 查看当前订单状态
+grep "Active orders:" log/grid_strategy.log | tail -5
+```
+
+**Q: 订单达到限制无法下单？**
+```bash
+# 检查当前订单计数
+grep "Max.*orders reached" log/grid_strategy.log | tail -5
+
+# 程序会自动在5分钟内同步并恢复下单
+# 或手动调整限制参数重启
+uv run grid_strategy.py --symbol TON --max-orders 100
+```
 
 **Q: WebSocket 连接频繁断开**
 ```bash
