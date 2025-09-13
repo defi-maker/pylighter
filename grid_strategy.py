@@ -14,7 +14,6 @@ Simplified Grid Trading Strategy - Aligned with Binance Reference Implementation
 
 import os
 import asyncio
-import logging
 import time
 import argparse
 import signal
@@ -27,35 +26,29 @@ from pylighter.websocket_manager import PriceWebSocketManager
 from pylighter.order_manager import OrderSyncManager, BatchOrderManager
 from pylighter.market_utils import MarketDataManager
 
+# 使用日志工具库
+from utils.logger_config import get_strategy_logger
+
 # 加载环境变量
 load_dotenv()
-os.makedirs("log", exist_ok=True)
+
+# 初始化日志器
+logger = get_strategy_logger("grid")
 
 # ==================== 配置 ====================
 COIN_NAME = "TON"
-GRID_SPACING = 0.0003         # 0.03% 超高频网格 (利用零手续费优势)
-INITIAL_QUANTITY = 15.0       # 每单 $15 USD (提高单次收益)
-LEVERAGE = 8                  # 8倍杠杆 (零费率下适度提高)
-POSITION_THRESHOLD = 300      # 锁仓阈值 (提高资金效率)
-ORDER_FIRST_TIME = 5          # 首单间隔时间 (提高响应速度)
+
+# 🎯 优化后的核心参数
+GRID_SPACING = 0.0005         # 0.05% 优化网格间距 (与价格阈值协调)
+INITIAL_QUANTITY = 15.0       # 每单 $15 USD (保持不变，金额合理)
+LEVERAGE = 6                  # 5倍杠杆 (降低风险暴露)
+POSITION_THRESHOLD = 500      # 锁仓阈值 (更早触发风控)
+ORDER_FIRST_TIME = 3          # 首单间隔3秒 (提高响应速度)
 
 # 新增优化参数
-MAX_ORDERS_PER_SIDE = 15      # 单边最大订单数
-ORDER_REFRESH_INTERVAL = 30   # 订单刷新间隔(秒)
-PRICE_UPDATE_THRESHOLD = 0.0001  # 价格变动阈值触发订单调整
-
-# ==================== 日志配置 ====================
-script_name = os.path.splitext(os.path.basename(__file__))[0]
-logging.basicConfig(
-    level=logging.INFO,  # 根 logger 设置为 INFO，过滤掉所有 DEBUG 信息
-    format="%(asctime)s - %(levelname)s - %(message)s",
-    handlers=[
-        logging.FileHandler(f"log/{script_name}.log"),
-        logging.StreamHandler(),
-    ],
-)
-logger = logging.getLogger()
-logger.setLevel(logging.INFO)
+MAX_ORDERS_PER_SIDE = 15      # 单边最大订单数 (降低复杂度)
+ORDER_REFRESH_INTERVAL = 20   # 订单刷新间隔(秒) (更频繁调整)
+PRICE_UPDATE_THRESHOLD = 0.0002  # 价格变动阈值 0.02% (减少噪音交易)
 
 
 class GridBot:
