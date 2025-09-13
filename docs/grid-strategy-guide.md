@@ -15,7 +15,7 @@
 
 ### 参数配置
 
-在 `grid_strategy_ton.py` 中可调整的参数：
+在 `grid_strategy.py` 中可调整的参数：
 
 ```python
 COIN_NAME = "TON"              # 交易币种
@@ -30,7 +30,7 @@ UPDATE_INTERVAL = 5            # 价格更新间隔(秒)
 
 ### 1. 模拟测试（强烈推荐先运行）
 ```bash
-uv run grid_strategy_ton.py --dry-run
+uv run grid_strategy.py --dry-run
 ```
 
 模拟测试特点：
@@ -41,7 +41,7 @@ uv run grid_strategy_ton.py --dry-run
 
 ### 2. 实盘交易
 ```bash
-uv run grid_strategy_ton.py
+uv run grid_strategy.py
 ```
 
 **启动前确认：**
@@ -52,10 +52,10 @@ uv run grid_strategy_ton.py
 ### 3. 其他币种测试
 ```bash
 # 测试 XRP
-uv run grid_strategy_ton.py --symbol XRP --dry-run
+uv run grid_strategy.py --symbol XRP --dry-run
 
 # 实际交易 XRP  
-uv run grid_strategy_ton.py --symbol XRP
+uv run grid_strategy.py --symbol XRP
 ```
 
 ## 策略逻辑详解

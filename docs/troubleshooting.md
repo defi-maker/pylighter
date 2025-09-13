@@ -322,7 +322,7 @@ grep "Position sync" $LOG_FILE | tail -5
 ### 紧急停止策略
 ```bash
 # 1. 停止进程
-pkill -f "grid_strategy_ton.py"
+pkill -f "grid_strategy.py"
 
 # 2. 取消所有订单
 python -c "
@@ -352,7 +352,7 @@ asyncio.run(emergency_cancel())
 mkdir -p backup/$(date +%Y%m%d_%H%M%S)
 cp log/*.log backup/$(date +%Y%m%d_%H%M%S)/
 cp .env backup/$(date +%Y%m%d_%H%M%S)/
-cp grid_strategy_ton.py backup/$(date +%Y%m%d_%H%M%S)/
+cp grid_strategy.py backup/$(date +%Y%m%d_%H%M%S)/
 ```
 
 ## 获取支持

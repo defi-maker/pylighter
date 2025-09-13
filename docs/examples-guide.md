@@ -118,7 +118,7 @@ cp examples/ton_contract_trading.py my_strategy.py
 uv run examples/grid_strategy_simulation.py
 
 # 确认无误后运行实盘
-uv run grid_strategy_ton.py
+uv run grid_strategy.py
 ```
 
 ## 示例代码结构

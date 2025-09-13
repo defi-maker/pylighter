@@ -8,7 +8,7 @@ import asyncio
 import logging
 import time
 import math
-from grid_strategy_ton import LighterGridBot
+from grid_strategy import LighterGridBot
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger()
@@ -144,7 +144,7 @@ async def test_grid_dryrun():
         await bot.lighter.cleanup()
         print("\n✅ Dry run completed successfully!")
         print("\n🎯 The strategy is ready for live trading")
-        print("   To run live: uv run grid_strategy_ton.py")
+        print("   To run live: uv run grid_strategy.py")
         
     except Exception as e:
         print(f"\n❌ Dry run failed: {e}")

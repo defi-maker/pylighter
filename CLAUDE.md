@@ -37,8 +37,8 @@ uv run strategies/example_grid_usage.py
 uv run strategies/backtest_runner.py
 
 # Run TON Grid Trading Strategy (IMPORTANT!)
-uv run grid_strategy_ton.py --dry-run      # Dry run mode (recommended for testing)
-uv run grid_strategy_ton.py --symbol TON   # Live trading mode (requires confirmation)
+uv run grid_strategy.py --dry-run      # Dry run mode (recommended for testing)
+uv run grid_strategy.py --symbol TON   # Live trading mode (requires confirmation)
 
 # Run price simulator
 uv run strategies/price_simulator.py
@@ -156,13 +156,13 @@ The project includes comprehensive testing tools:
 ### Command Line Usage
 ```bash
 # Dry run mode (safe testing)
-uv run grid_strategy_ton.py --dry-run
+uv run grid_strategy.py --dry-run
 
 # Live trading (requires confirmation)
-uv run grid_strategy_ton.py
+uv run grid_strategy.py
 
 # Custom symbol
-uv run grid_strategy_ton.py --symbol BTC --dry-run
+uv run grid_strategy.py --symbol BTC --dry-run
 ```
 
 ## Program Startup and Shutdown Handling
@@ -254,12 +254,12 @@ signal.signal(signal.SIGTERM, signal_handler)  # System termination
 #### **Starting the Bot**
 1. **Dry Run Mode** (Recommended for testing):
    ```bash
-   uv run grid_strategy_ton.py --dry-run
+   uv run grid_strategy.py --dry-run
    ```
 
 2. **Live Trading Mode**:
    ```bash
-   uv run grid_strategy_ton.py
+   uv run grid_strategy.py
    ```
    - ⚠️ Requires typing 'YES' to confirm
    - ⚠️ Will manage existing positions
