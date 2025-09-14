@@ -35,16 +35,16 @@ logger = get_strategy_logger("grid")
 # ==================== 配置 ====================
 COIN_NAME = "TON"
 
-# 🎯 优化后的核心参数
-GRID_SPACING = 0.0005         # 0.05% 优化网格间距 (与价格阈值协调)
-INITIAL_QUANTITY = 15.0       # 每单 $15 USD (保持不变，金额合理)
-LEVERAGE = 6                  # 6倍杠杆 (降低风险暴露)
-POSITION_THRESHOLD_RATIO = 0.5   # 持仓阈值比例 (50% of 账户价值)
-ORDER_FIRST_TIME = 3          # 首单间隔3秒 (提高响应速度)
+# 🎯 优化后的核心参数 - 专注提高持仓规模
+GRID_SPACING = 0.0005         # 0.05% 网格间距 (保持原值，确保交易频率)
+INITIAL_QUANTITY = 60.0       # 每单 $60 USD (大幅提高单笔金额)
+LEVERAGE = 10                 # 10倍杠杆 (更积极使用杠杆)
+POSITION_THRESHOLD_RATIO = 0.5   # 持仓阈值比例 (50% 提高风控阈值，允许更大持仓)
+ORDER_FIRST_TIME = 2          # 首单间隔2秒 (提高响应速度)
 
-# 新增优化参数
-MAX_ORDERS_PER_SIDE = 15      # 单边最大订单数 (降低复杂度)
-ORDER_REFRESH_INTERVAL = 20   # 订单刷新间隔(秒) (更频繁调整)
+# 新增优化参数 - 平衡效率与持仓规模
+MAX_ORDERS_PER_SIDE = 20        # 单边最大订单数 (减少复杂度，集中资金)
+ORDER_REFRESH_INTERVAL = 20    # 订单刷新间隔(秒) (降低频率，减少手续费)
 PRICE_UPDATE_THRESHOLD = 0.0002  # 价格变动阈值 0.02% (减少噪音交易)
 
 # 🚀 动态止盈参数 (对齐 Binance 参考实现)
