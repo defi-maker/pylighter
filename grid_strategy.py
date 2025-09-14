@@ -42,10 +42,11 @@ LEVERAGE = 10                 # 10倍杠杆 (更积极使用杠杆)
 POSITION_THRESHOLD_RATIO = 0.5   # 持仓阈值比例 (50% 提高风控阈值，允许更大持仓)
 ORDER_FIRST_TIME = 2          # 首单间隔2秒 (提高响应速度)
 
-# 新增优化参数 - 平衡效率与持仓规模
-MAX_ORDERS_PER_SIDE = 20        # 单边最大订单数 (减少复杂度，集中资金)
+# 新增优化参数 - 多层网格策略
+MAX_ORDERS_PER_SIDE = 35        # 单边最大订单数 (大幅提高，支持多层网格)
 ORDER_REFRESH_INTERVAL = 20    # 订单刷新间隔(秒) (降低频率，减少手续费)
 PRICE_UPDATE_THRESHOLD = 0.0002  # 价格变动阈值 0.02% (减少噪音交易)
+GRID_LEVELS = 8                # 网格层数 (每边8层，共16个订单)
 
 # 🚀 动态止盈参数 (对齐 Binance 参考实现)
 DYNAMIC_PROFIT_MIN = 0.005    # 最小止盈率 0.5%
@@ -573,20 +574,42 @@ class GridBot:
                 else:
                     logger.debug(f"多头装死模式：已有止盈单({counts['sell_orders']})，跳过")
             else:
-                # 正常网格模式 (对齐 Binance line 658-664)
-                logger.info(f"多头正常网格模式 (持仓={self.long_position})")
+                # 🚀 多层网格模式 (保留风控，增加订单密度)
+                logger.info(f"多头多层网格模式 (持仓={self.long_position})")
 
                 # 撤销现有订单并重新下单
                 await self.batch_manager.cancel_orders_for_side_safe(self.symbol, 'long')
 
-                # 计算网格价格
-                exit_price = self.latest_price * (1 + self.grid_spacing)
-                entry_price = self.latest_price * (1 - self.grid_spacing)
+                # 创建多层网格订单 (最多GRID_LEVELS层)
+                orders_placed = 0
+                base_quantity = quantity
 
-                # 下止盈单和补仓单
-                await self.place_order_safe('sell', exit_price, quantity, 'long')
-                await self.place_order_safe('buy', entry_price, quantity, 'long')
-                logger.info(f"✅ 多头网格: 止盈@${exit_price:.6f}, 补仓@${entry_price:.6f}")
+                for i in range(GRID_LEVELS):
+                    if orders_placed >= self.max_orders_per_side:
+                        break
+
+                    # 网格间距递增 (每层间距稍微扩大)
+                    level_spacing = self.grid_spacing * (1 + i * 0.1)
+
+                    # 止盈单价格 (逐层递增)
+                    exit_price = self.latest_price * (1 + level_spacing * (i + 1))
+                    # 补仓单价格 (逐层递减)
+                    entry_price = self.latest_price * (1 - level_spacing * (i + 1))
+
+                    # 订单量保持一致或略微递增
+                    level_quantity = base_quantity * (1 + i * 0.05)
+
+                    # 下止盈单
+                    if orders_placed < self.max_orders_per_side:
+                        await self.place_order_safe('sell', exit_price, level_quantity, 'long')
+                        orders_placed += 1
+
+                    # 下补仓单
+                    if orders_placed < self.max_orders_per_side:
+                        await self.place_order_safe('buy', entry_price, level_quantity, 'long')
+                        orders_placed += 1
+
+                logger.info(f"✅ 多头网格: 共{orders_placed}个订单 ({GRID_LEVELS}层网格)")
 
         except Exception as e:
             logger.error(f"多头订单失败: {e}")
@@ -623,20 +646,42 @@ class GridBot:
                 else:
                     logger.debug(f"空头装死模式：已有止盈单({counts['buy_orders']})，跳过")
             else:
-                # 正常网格模式 (对齐 Binance line 684-690)
-                logger.info(f"空头正常网格模式 (持仓={self.short_position})")
+                # 🚀 多层网格模式 (保留风控，增加订单密度)
+                logger.info(f"空头多层网格模式 (持仓={self.short_position})")
 
                 # 撤销现有订单并重新下单
                 await self.batch_manager.cancel_orders_for_side_safe(self.symbol, 'short')
 
-                # 计算网格价格
-                exit_price = self.latest_price * (1 - self.grid_spacing)
-                entry_price = self.latest_price * (1 + self.grid_spacing)
+                # 创建多层网格订单 (最多GRID_LEVELS层)
+                orders_placed = 0
+                base_quantity = quantity
 
-                # 下止盈单和补仓单
-                await self.place_order_safe('buy', exit_price, quantity, 'short')
-                await self.place_order_safe('sell', entry_price, quantity, 'short')
-                logger.info(f"✅ 空头网格: 止盈@${exit_price:.6f}, 补仓@${entry_price:.6f}")
+                for i in range(GRID_LEVELS):
+                    if orders_placed >= self.max_orders_per_side:
+                        break
+
+                    # 网格间距递增 (每层间距稍微扩大)
+                    level_spacing = self.grid_spacing * (1 + i * 0.1)
+
+                    # 止盈单价格 (逐层递减)
+                    exit_price = self.latest_price * (1 - level_spacing * (i + 1))
+                    # 补仓单价格 (逐层递增)
+                    entry_price = self.latest_price * (1 + level_spacing * (i + 1))
+
+                    # 订单量保持一致或略微递增
+                    level_quantity = base_quantity * (1 + i * 0.05)
+
+                    # 下止盈单
+                    if orders_placed < self.max_orders_per_side:
+                        await self.place_order_safe('buy', exit_price, level_quantity, 'short')
+                        orders_placed += 1
+
+                    # 下补仓单
+                    if orders_placed < self.max_orders_per_side:
+                        await self.place_order_safe('sell', entry_price, level_quantity, 'short')
+                        orders_placed += 1
+
+                logger.info(f"✅ 空头网格: 共{orders_placed}个订单 ({GRID_LEVELS}层网格)")
 
         except Exception as e:
             logger.error(f"空头订单失败: {e}")
